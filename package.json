@@ -10,6 +10,7 @@
   "author": "RudiRuder",
   "license": "MIT",
   "dependencies": {
+    "electron":"^28.2.2",
     "axios": "^1.6.7",
     "electron-log":"^5.1.1",
     "clipboard-event":"^1.6.0",
