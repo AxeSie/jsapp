@@ -20,6 +20,10 @@ const access_token_time = 800 // per aktueller Definition ist die Gültigkeit de
 let auth_token ="";// Zwischenspeicher für den accesstoken - flüchtig mit Programm ende
 let refr_token ="";// gleiche für den refresh token
 let success_token = false;//dient als Merker für den erfolgreichen Loginalgorithmus
+const dev_log_log = './dev/log.log';
+const dev_game_log = './dev/Game.log';
+
+
 const log_log = '\\RSILauncher\\log.log'; // suche hier nach der log datei
 const game_log = '\\Game.log'; // Dateiname für Gamelog Datei
 const my_access_url = myconfig.url+"api/token/refresh/";
@@ -104,7 +108,12 @@ function createMainWindow(){
 //Funktion zur Ermittlung des Installationsverzeichnisses von Star Citizen 
 function getthelogs() {
     return new Promise(function(resolve,reject){ // da JS asynchron abläuft müssen wir hier die Abarbeitung abwarten mit einem Promise
-        fs.readFile(log_path+log_log, 'utf8',(err,mzdata) => {//lies die Datei ein und gib den Inhalt zurück
+        if (config.node_env !== "production"){
+            route = "./dev/log.log";
+        } else {
+            route = log_path+log_log;
+        };
+        fs.readFile(route, 'utf8',(err,mzdata) => {//lies die Datei ein und gib den Inhalt zurück
             if (err){// haben wir einen Fehler?
                 reject(err);//erzeuge einen Fehler
                 log.info('shit happens didnt read the file: log.log');// logge den Fehler
@@ -119,7 +128,12 @@ function getthelogs() {
 //Nun suche und lese die Game.log Datei - gleicher Aufbau wie bei der Log.log Datei siehe eine Funktion zuvor
 function getthegame() {
     return new Promise(function(resolve,reject){
-        fs.readFile(prog_path+game_log, 'utf8',(err,tzdata) => {
+        if (config.node_env !== "production"){
+            route="./dev/Game.log";
+        } else {
+            route = prog_path+game_log;
+        };
+        fs.readFile(route, 'utf8',(err,tzdata) => {
             if (err){
                 log.info('shit happens didnt read the game file: Game.log');
                 reject(err);
