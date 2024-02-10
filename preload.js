@@ -17,15 +17,7 @@ const ipc = {
         'sendReceive': []
     }
 };
-/*
-const bridge_api = {
-    dosomething: (msg) => ipcRenderer.send("login_user",msg),
-    regsomething: (msg) => ipcRenderer.send("register_new_user",msg),
-    ressomething: (msg) => ipcRenderer.send("reset_user_pw",msg)
 
-    
-}
-*/
 contextBridge.exposeInMainWorld( 
         // Allowed 'ipcRenderer' methods.
     'ipcRender', {
