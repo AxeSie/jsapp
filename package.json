@@ -1,0 +1,21 @@
+{
+  "name": "myfirstdeskapp",
+  "productName": "Desktop App for some Star Citizen Stats",
+  "version": "1.0.0",
+  "description": "first blood",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "RudiRuder",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "electron-log":"^5.1.1",
+    "clipboard-event":"^1.6.0",
+    "tail":"^2.2.6",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.1",
+    "sharp": "^0.33.2"
+  }
+}

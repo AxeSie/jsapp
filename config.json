@@ -1,0 +1,11 @@
+{
+  "node_env": "development",
+  "debug": "true",
+  "level_dev": "debug",
+  "level_prod": "info",
+  "left":1350,
+  "top":100,
+  "width":500,
+  "height":900,
+  "token": "U2FsdGVkX1/kNRyu313JLVrWi0bSASHX+BtC6LnJEZlAPD/um4JsohkKBPoGRl9Nms0ti4FT/p0FjCaWSO8yCRGEyb9ZkrjLJnKq3lTP2Vfx4+8DSo8i0YuQkwreGMHmWn12zd/Nz7WVMAxc2LGGCOe3UjMs8f9hnASbK3TmaZ+Vp9kBeIyYVDvTLsFU3qGn0VmIFq+wOA8nlVWe3b+QAEs34yWpXORyh4ekC/Gkputxtr3KhBaEJ7Bw2hdYHNNpLe2F/EwN5UzlucjMXQJbPdwy/GdM3aufg8C3DN84P3FZdxa0CUVajHFkB1AHjJaxD2Sf9hoxeby7TCnNDrz98A=="
+}
