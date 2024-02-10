@@ -3,6 +3,7 @@
   "debug": "true",
   "level_dev": "debug",
   "level_prod": "info",
+  "url":"https://v6c2w2m4suw4zy.myhome.rudiruder.org/",
   "left":1350,
   "top":100,
   "width":500,
