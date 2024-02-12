@@ -12,6 +12,8 @@ const { app, BrowserWindow, clipboard, ipcMain } = require('electron');// refere
 var crypto = require("crypto-js");// zur Verschlüsselten Speicherung des Refresh Token
 ///const { AsyncResource } = require('async_hooks');
 const sharp = require('sharp');
+const {Blob} = require('buffer');
+const { Readable } = require('stream');
 
 
 // definiere Globale Variablen
@@ -30,6 +32,7 @@ const my_access_url = myconfig.url+"api/token/refresh/";
 const my_refresh_url = myconfig.url+"api/token/";
 const my_register_url = myconfig.url+"api/register/";
 const my_reset_url = myconfig.url+"api/reset/";
+const my_uploadpic_url = myconfig.url+"api/upload/";
 let log_path = '';
 let prog_path = '';
 let my_game_handle ='';
@@ -108,7 +111,7 @@ function createMainWindow(){
 //Funktion zur Ermittlung des Installationsverzeichnisses von Star Citizen 
 function getthelogs() {
     return new Promise(function(resolve,reject){ // da JS asynchron abläuft müssen wir hier die Abarbeitung abwarten mit einem Promise
-        if (config.node_env !== "production"){
+        if (myconfig.node_env !== "production"){
             route = "./dev/log.log";
         } else {
             route = log_path+log_log;
@@ -128,7 +131,7 @@ function getthelogs() {
 //Nun suche und lese die Game.log Datei - gleicher Aufbau wie bei der Log.log Datei siehe eine Funktion zuvor
 function getthegame() {
     return new Promise(function(resolve,reject){
-        if (config.node_env !== "production"){
+        if (myconfig.node_env !== "production"){
             route="./dev/Game.log";
         } else {
             route = prog_path+game_log;
@@ -274,15 +277,27 @@ function startwindow(){
     });        
     clipboardListener.startListening();// setze den Eventhandler zum Clipboard überwachen
     clipboardListener.on('change',() => {// bei Event
-        const buffer = clipboard.readImage('clipboard').toPNG();// lies doch einfach mal ein Bild ein
+        let buffer = clipboard.readImage().toPNG();// lies doch einfach mal ein Bild ein
         log.info (`Buffer typer : ${buffer.length}`);
-        if (buffer > 0){
-            const img = sharp(buffer).extrakt(config.left,config.top,config.width,config.height);
-            sende_img(img);
-        }
-        const mytext = clipboard.readText('clipboard');// und versuch es mi einem Text
-        log.info(`Text from Clipboard : ${mytext}`)
-        clipboardchanged(mytext);// Auswertung mittels Funktion
+        if (buffer.length > 0){
+            const img = sharp(buffer)
+            img.metadata()
+            .then(function (metadata){
+                log.info(`Bild Weite: ${metadata.width} , Höhe: ${metadata.height}`);
+                if ((myconfig.screen_width === metadata.width)&&(myconfig.screen_height === metadata.height)){
+                        log.info("Image Größe bekannt - Schnittmuster bekannt");
+                        sharp(buffer).extract({left:myconfig.left,top:myconfig.top,width:myconfig.width,height:myconfig.height})
+                        .toBuffer()
+                        .then(data => sende_img(data));
+                } else {
+                    log.error("Image Größe unbekannt bzw Schnittmuster unbekannt  - bitte korrigieren - ");
+                };
+            });
+        } else {
+            const mytext = clipboard.readText('clipboard');// und versuch es mi einem Text
+            log.info(`Text from Clipboard : ${mytext}`)
+            clipboardchanged(mytext);// Auswertung mittels Funktion
+        };
     });
     app.whenReady().then(() => {// installiere Eventhandler App ready
         mywindow=createMainWindow();// erzeuge Neues Fenster
@@ -349,10 +364,37 @@ function config_token(data) {
     }
 )};
 
+function buffertoblob(buffer) {
+    const readable = new Readable();
+    readable._read = () => {};
+    readable.push(buffer);
+    readable.push(null);
+  
+    return new Blob([readable.read()]);
+  }
+
 
 //function sendet den screenshop
 function sende_img(img){
-
+    const imageBlob = buffertoblob(img);
+    const formData = new FormData();
+    formData.append('image', imageBlob, `screen${Date.now()}.png`);
+    const headers = {
+      'Content-Type': 'multipart/form-data',
+      'Authorization': 'Bearer '+auth_token,
+    };
+    return axios// mittels des Axios moduls
+    .post(my_uploadpic_url,formData,{ 
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer '+auth_token
+        }})
+    .then((response)=>{// erfolg Datei hochgeladen
+        log.info(`Bild erfolgreich hochgeladenm ${response.status} `);
+    })
+    .catch(function(error){//fehlerbehandlung
+        log.info(`got Error response Upload Bild ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
+    });
 };
 
 
