@@ -14,6 +14,7 @@ var crypto = require("crypto-js");// zur Verschlüsselten Speicherung des Refres
 const sharp = require('sharp');
 const {Blob} = require('buffer');
 const { Readable } = require('stream');
+const FormData = require('form-data')
 
 
 // definiere Globale Variablen
@@ -32,7 +33,7 @@ const my_access_url = myconfig.url+"api/token/refresh/";
 const my_refresh_url = myconfig.url+"api/token/";
 const my_register_url = myconfig.url+"api/register/";
 const my_reset_url = myconfig.url+"api/reset/";
-const my_uploadpic_url = myconfig.url+"api/upload/";
+const my_uploadpic_url = myconfig.url+"api/files/images/";
 let log_path = '';
 let prog_path = '';
 let my_game_handle ='';
@@ -287,8 +288,14 @@ function startwindow(){
                 if ((myconfig.screen_width === metadata.width)&&(myconfig.screen_height === metadata.height)){
                         log.info("Image Größe bekannt - Schnittmuster bekannt");
                         sharp(buffer).extract({left:myconfig.left,top:myconfig.top,width:myconfig.width,height:myconfig.height})
-                        .toBuffer()
-                        .then(data => sende_img(data));
+                        .toFile(`./renderer/images/sendtobackend/output${Date.now()}.png`)
+                        .then(info => { 
+                            log.info(`Datei geschrieben : ${info}`);
+                            sende_img('./renderer/images/sendtobackend/output.png');
+                        })
+                        .catch(err =>{
+                            log.error(`Fehler beim Datei schreiben : ${err}`)
+                        });
                 } else {
                     log.error("Image Größe unbekannt bzw Schnittmuster unbekannt  - bitte korrigieren - ");
                 };
@@ -364,30 +371,15 @@ function config_token(data) {
     }
 )};
 
-function buffertoblob(buffer) {
-    const readable = new Readable();
-    readable._read = () => {};
-    readable.push(buffer);
-    readable.push(null);
-  
-    return new Blob([readable.read()]);
-  }
-
-
 //function sendet den screenshop
-function sende_img(img){
-    const imageBlob = buffertoblob(img);
-    const formData = new FormData();
-    formData.append('image', imageBlob, `screen${Date.now()}.png`);
-    const headers = {
-      'Content-Type': 'multipart/form-data',
-      'Authorization': 'Bearer '+auth_token,
-    };
-    return axios// mittels des Axios moduls
-    .post(my_uploadpic_url,formData,{ 
+function sende_img(img_path){
+    const myform = new FormData();
+    myform.append("image",fs.createReadStream(img_path));
+    axios// mittels des Axios moduls
+    .post(my_uploadpic_url,myform,{ 
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer '+auth_token
+            'Content-Type': 'multipart/form-data',
+            'Authorization': 'Bearer '+auth_token,
         }})
     .then((response)=>{// erfolg Datei hochgeladen
         log.info(`Bild erfolgreich hochgeladenm ${response.status} `);
