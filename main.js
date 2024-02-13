@@ -282,16 +282,17 @@ function startwindow(){
         log.info (`Buffer typer : ${buffer.length}`);
         if (buffer.length > 0){
             const img = sharp(buffer)
+            let img_path = `./renderer/images/sendtobackend/output${Date.now()}.png`;
             img.metadata()
             .then(function (metadata){
                 log.info(`Bild Weite: ${metadata.width} , Höhe: ${metadata.height}`);
                 if ((myconfig.screen_width === metadata.width)&&(myconfig.screen_height === metadata.height)){
                         log.info("Image Größe bekannt - Schnittmuster bekannt");
                         sharp(buffer).extract({left:myconfig.left,top:myconfig.top,width:myconfig.width,height:myconfig.height})
-                        .toFile(`./renderer/images/sendtobackend/output${Date.now()}.png`)
+                        .toFile(img_path)
                         .then(info => { 
                             log.info(`Datei geschrieben : ${info}`);
-                            sende_img('./renderer/images/sendtobackend/output.png');
+                            sende_img(img_path);
                         })
                         .catch(err =>{
                             log.error(`Fehler beim Datei schreiben : ${err}`)
@@ -383,9 +384,11 @@ function sende_img(img_path){
         }})
     .then((response)=>{// erfolg Datei hochgeladen
         log.info(`Bild erfolgreich hochgeladenm ${response.status} `);
+        fs.rmSync(img_path,{force:true,});
     })
     .catch(function(error){//fehlerbehandlung
-        log.info(`got Error response Upload Bild ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
+
+        log.info(`got Error response Upload Bild status: ${error.response.status }    Message: ${error.message }`);
     });
 };
 
