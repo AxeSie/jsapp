@@ -19,7 +19,7 @@ const FormData = require('form-data')
 
 // definiere Globale Variablen
 let lauf = 0; // Laufzeit für die Gültigkeit des Access Tokens - wenn kurz for Ablauf bitte an der API erneuern lassen
-const access_token_time = 800 // per aktueller Definition ist die Gültigkeit des Accesstokens 15 Minuten oder 900 sec. danach muss er mit dem Refresh Token erneuert werden
+const access_token_time = 100 // per aktueller Definition ist die Gültigkeit des Accesstokens 15 Minuten oder 900 sec. danach muss er mit dem Refresh Token erneuert werden
 let auth_token ="";// Zwischenspeicher für den accesstoken - flüchtig mit Programm ende
 let refr_token ="";// gleiche für den refresh token
 let success_token = false;//dient als Merker für den erfolgreichen Loginalgorithmus
@@ -346,7 +346,7 @@ function get_new_access(refrtok){
 //Zeitschleife zur Generierung des Tokens
 function refresh_auth_token(){
     lauf++;
-    if (lauf === access_token_time){// vergleich mit sollzeit
+    if (lauf > access_token_time){// vergleich mit sollzeit
         lauf=0;
         log.info('nun machen wir einen Auth Token refresh...');
         get_new_access(refr_token);// rufe funktion zur erneuerung auf
