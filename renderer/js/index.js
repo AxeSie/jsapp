@@ -26,6 +26,7 @@ function myfunction3(){
 const uname = document.getElementById("user");
 const passw = document.getElementById("pass");
 const email = document.getElementById("email");
+const gamehandle = document.getElementById("gamehandle");
 const text = document.getElementById("text-caption");
 const el = document.getElementById("loginbtn");
 const ef = document.getElementById("registerbtn");

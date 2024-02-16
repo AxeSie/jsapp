@@ -557,6 +557,9 @@ ipcMain.on("login_user", (event,args) =>{//KontextBridge zum Renderer Prozess - 
 
 ipcMain.on("register_new_user", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier Register Button gedrückt
     log.info(`got clicked data register : ${args}`);
+    my_game_handle = args.gamehandle;
+    myconfig.handle = my_game_handle;
+    fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Date
     axios// post zur backendAPI
         .post(my_register_url,args,{
             timeout:5000,
