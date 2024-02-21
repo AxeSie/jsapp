@@ -109,6 +109,27 @@ function createMainWindow(){
             contextIsolation: true,//auch der Kontext an sich ist nicht für die Aussenwelt verfügbar
         }
     });
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        if (url === 'about:blank'){
+            return {
+                action: 'allow',
+                overrideBrowserWindowOptions:{
+                    width:500,
+                    height:350,
+                    frame:false,
+                    fullscreenable:false,
+                    transparent:true,
+                    resizable:true,
+                    alwaysOnTop:true,
+                    webPreferences:{
+                        preload:path.join(__dirname,'preload.js'),
+                        contextIsolation: true,
+                    }
+                }
+            }
+        }
+        return { action:'deny'}
+    });
     if (success_token){// wurde der Loginprozess erfolgreich abgeschlossen ?
         mainWindow.loadFile(path.join(__dirname,'./renderer/main.html'));//ja weiter mit der App
     } else {//nein
