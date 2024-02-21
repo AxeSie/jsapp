@@ -10,13 +10,16 @@
   "author": "RudiRuder",
   "license": "MIT",
   "dependencies": {
-    "electron":"^28.2.2",
     "axios": "^1.6.7",
-    "electron-log":"^5.1.1",
-    "clipboard-event":"^1.6.0",
-    "tail":"^2.2.6",
+    "bufferutil": "^4.0.8",
+    "clipboard-event": "^1.6.0",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.4.1",
-    "sharp": "^0.33.2"
+    "electron": "^28.2.2",
+    "electron-log": "^5.1.1",
+    "sharp": "^0.33.2",
+    "tail": "^2.2.6",
+    "utf-8-validate": "^6.0.3",
+    "ws": "^8.16.0"
   }
 }

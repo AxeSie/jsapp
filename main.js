@@ -110,7 +110,7 @@ function createMainWindow(){
         }
     });
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (url === 'about:blank'){
+        if (url !== 'about:blank'){
             return {
                 action: 'allow',
                 overrideBrowserWindowOptions:{
@@ -563,8 +563,8 @@ ipcMain.on("login_user", (event,args) =>{//KontextBridge zum Renderer Prozess - 
             store_new_token(response);
             log.info(`got answerfrom post apitoken: ${response} `);
             link = "./renderer/main.html";
-        log.info(`springe ab: ${link}`);
-        mywindow.loadFile(link);// rufe neuen Fensterinhalt auf
+            log.info(`springe ab: ${link}`);
+            mywindow.loadFile(link);// rufe neuen Fensterinhalt auf
         })
         .catch(function(error){// im Fehlerfall error
             mywindow.webContents.send('message:update',`Error Status: ${error.response.status} Detail : ${JSON.stringify(error.response.data)} `);
@@ -625,6 +625,10 @@ ipcMain.on("reset_user_pw", (event,args) =>{//KontextBridge zum Renderer Prozess
                 log.error(`got Error response reset Data: ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
             }
         });
+});
+
+ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier öffne Chat Fenster
+    log.info(`got checkbox 1 clicked signal is: ${args}`);
 });
 
 app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende auch die App

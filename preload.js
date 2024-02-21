@@ -7,14 +7,15 @@ const ipc = {
         'send': [
             'login_user',
             'register_new_user',
-            'reset_user_pw'
+            'reset_user_pw',
+            'check1',
         ],
         // From main to render.
         'receive': [
-            'message:update' // Here is your channel name
+            'message:update', // Here is your channel name
         ],
         // From render to main and back again.
-        'sendReceive': []
+        'sendReceive': [],
     }
 };
 
