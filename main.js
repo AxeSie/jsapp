@@ -11,6 +11,7 @@ const { app, BrowserWindow, clipboard, ipcMain } = require('electron');// refere
 var crypto = require("crypto-js");// zur Verschlüsselten Speicherung des Refresh Token
 const sharp = require('sharp');
 const FormData = require('form-data');
+const webSocket = require ('ws');
 const exec = require('child_process').exec;
 
 
@@ -520,15 +521,23 @@ function check_game_is_running(){
     return new Promise(function(resolve,reject){
         isRunning(game_process).then((v) => {
             if (v){
-                log.info('Game is running');
+                //log.info('Game is running');
                 game_running = true;
             } else {
-                log.warn('Game is not active');
+                //log.warn('Game is not active');
                 game_running = false;
             }
             resolve(v);
         })
     })
+};
+
+function heartbeat(){
+    clearTimeout(this.pingTimeout);
+    this.pingTimeout = setTimeout(() => {
+        this.terminate();
+        log.error('Lost Connection to Websocket Server')
+    }, 30000 + 1000);
 };
 
 // hier startet das eigentliche Programm
@@ -629,7 +638,32 @@ ipcMain.on("reset_user_pw", (event,args) =>{//KontextBridge zum Renderer Prozess
 
 ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier öffne Chat Fenster
     log.info(`got checkbox 1 clicked signal is: ${args}`);
+    if (args === 'True'){
+        ws = new webSocket(my_ws_url,{
+            perMessageDeflate:false,
+        })
+    } else {
+        ws.close();
+    }
 });
+
+ws.on('error',(error) => {
+    log.error(`Got Websocket Error : ${error}`);
+});
+
+ws.on('open', heartbeat);
+ws.on('ping', heartbeat);
+
+ws.on('close',function clear() {
+    log.info('Websocket closed');
+    clearTimeout(this.pingTimeout);
+});
+
+ws.on('message',function message (data){
+    log.info(`Got message over Websockets : ${data}`);
+})
+
+
 
 app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende auch die App
     if (process.platform !== 'darwin') app.quit()
