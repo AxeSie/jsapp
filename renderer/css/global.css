@@ -15,7 +15,7 @@ body {
    top: 60px;
    left: 60px;
    padding: 4px;
-   background-color: rgba(255, 255, 255,0.3);
+   background-color: rgba(255, 255, 255,0.7);
    border: 1px solid;
    border-color: gray;
    border-radius: 5px;
@@ -28,7 +28,7 @@ body {
    top: 60px;
    left: 6px;
    padding: 4px;
-   background-color: rgba(255, 255, 255,0.3);
+   background-color: rgba(255, 255, 255,0.6);
    border: 1px solid;
    border-color: gray;
    border-radius: 10%;
@@ -39,19 +39,22 @@ body {
     position :absolute;
     min-width: 300px;
     min-height: 400px;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(2, 3, 82, 0.6);
     border-radius: 18px;
     padding-left: 20px;
     padding-right: 20px;
     padding-top: 20px;
     padding-bottom: 20px;
-    font-family: 'Roboto', sans-serif;
+    font-family: Menlo,Roboto Mono,monospace;
     color: rgba(167, 237, 255,0.65);
     justify-content: center;
     text-align: center;
 }
 
-
+.vertical-center {
+    margin: auto;
+    display: block;
+}
 
 
 h1 {
@@ -66,26 +69,27 @@ label {
     word-wrap: break-word;
 }
 
-
-.mode_div,
-.known_or_custom_div,
-.custom_entries_div {
-    display: none;
+::placeholder {
+    color:rgba(196, 206, 197, 0.5);
 }
+
+::-ms-input-placeholder { /* Edge 12 -18 */
+    color:rgba(196, 206, 197, 0.5);
+  }
 
 select,
 button,
 input {
     -webkit-app-region: no-drag;
-
+    
     color: #a7edff;
     background-color: rgba(42, 96, 153, 0.7);
     border: 0.5px solid rgb(70, 135, 204);
     border-radius: 5px;
-    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.4);
-    font-size: 90%;
+    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.7);
+    font-size: 14px;
     text-align-last: center;
-
+    font-family: Menlo,Roboto Mono,monospace;
     line-height: 19px;
     padding: 7px;
     margin: 7px;
@@ -98,53 +102,13 @@ button[disabled] {
     color: #666666;
 }
 
-.custom_entries_div {
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-}
-
-#om_selectors_and_entries_div {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-}
-
-#om_selectors_div {
-    display: flex;
-    flex-direction: column;
-}
-
 .input_div {
     display: flex;
     flex-direction: column;
 }
 
-.om_select {
-    margin: 1px;
-}
-
 input {
     margin-top: 1px;
     margin-bottom: 1px;
-}
-
-#settings_img, #home_img {
-    -webkit-app-region: no-drag;
-    width: 30px;
-    position: absolute;
-    top: 23px;
-}
-
-#settings_img {
-    right: 30px;
-}
-
-#home_img {
-    left: 30px;
-}
-
-#settings_img:hover, #home_img:hover {
-    transform: scale(1.2);
 }
 

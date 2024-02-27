@@ -11,7 +11,7 @@ const { app, BrowserWindow, clipboard, ipcMain } = require('electron');// refere
 var crypto = require("crypto-js");// zur Verschlüsselten Speicherung des Refresh Token
 const sharp = require('sharp');
 const FormData = require('form-data');
-const webSocket = require ('ws');
+const WebSocket = require ('ws');
 const exec = require('child_process').exec;
 
 
@@ -98,7 +98,7 @@ function init_log(){
 
 //Funktion zur Erzeugung einer FensterKlasse
 function createMainWindow(){
-    const mainWindow = new BrowserWindow({//vererbt von Chomium
+    mainWindow = new BrowserWindow({//vererbt von Chomium
         width: 500,//Fenstebreite
         height:350,//Fensterhöhe
         frame: false,//Rahmenlos
@@ -136,7 +136,7 @@ function createMainWindow(){
     } else {//nein
         mainWindow.loadFile(path.join(__dirname,'./renderer/index.html'));//somit bitte Login renderen
     };
-    return mainWindow;
+    //return mainWindow;
 }
 
 //Funktion zur Ermittlung des Installationsverzeichnisses von Star Citizen 
@@ -422,7 +422,8 @@ function startwindow(){
 };
 
 // alles mit erfolg abgelaufen????????
-function onsuccess(){   
+function onsuccess(){ 
+    log.info('Alle Vorbereitungen abgeschlossen ---- auf zum Start');  
     return startwindow();
 }
 
@@ -452,7 +453,10 @@ function get_new_access(refrtok){
             log.error(`got Error response login Data: ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
             success_token = false;
             log.warn(`I think Refreshtoken expired - lets try to log in again`);
-            mainWindow.loadFile(path.join(__dirname,'./renderer/index.html'));//somit bitte Login renderen    
+            if (typeof mywindow !== 'undefined'){
+                link = "./renderer/index.html";
+                mywindow.loadFile(link);//somit bitte Login renderen    
+            };
         }
     });
 };
@@ -639,29 +643,28 @@ ipcMain.on("reset_user_pw", (event,args) =>{//KontextBridge zum Renderer Prozess
 ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier öffne Chat Fenster
     log.info(`got checkbox 1 clicked signal is: ${args}`);
     if (args === 'True'){
-        ws = new webSocket(my_ws_url,{
+        wss = new webSocket(my_ws_url,{
             perMessageDeflate:false,
+        });
+        wss.on('error',(error) => {
+            log.error(`Got Websocket Error : ${error}`);
+        });
+            
+        wss.on('open', heartbeat);
+        wss.on('ping', heartbeat);
+            
+        wss.on('close',function clear() {
+            log.info('Websocket closed');
+            clearTimeout(this.pingTimeout);
+        });
+            
+        wss.on('message',function message (data){
+            log.info(`Got message over Websockets : ${data}`);
         })
     } else {
-        ws.close();
+        wss.close();
     }
 });
-
-ws.on('error',(error) => {
-    log.error(`Got Websocket Error : ${error}`);
-});
-
-ws.on('open', heartbeat);
-ws.on('ping', heartbeat);
-
-ws.on('close',function clear() {
-    log.info('Websocket closed');
-    clearTimeout(this.pingTimeout);
-});
-
-ws.on('message',function message (data){
-    log.info(`Got message over Websockets : ${data}`);
-})
 
 
 
