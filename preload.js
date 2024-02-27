@@ -13,6 +13,7 @@ const ipc = {
         // From main to render.
         'receive': [
             'message:update', // Here is your channel name
+            'window:closed',
         ],
         // From render to main and back again.
         'sendReceive': [],

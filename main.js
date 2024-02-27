@@ -9,10 +9,10 @@ const clipboardListener = require ('clipboard-event');//modul zum Überwachen de
 Tail = require('tail').Tail;//Modul zur Überwachung der log Dateien
 const { app, BrowserWindow, clipboard, ipcMain } = require('electron');// referenz auf die Electron Module app ( die Anwendungsschicht), BrowserWindow (als Chromium Referenz), ipcMain (als Komminikation zum Renderer Prozess)
 var crypto = require("crypto-js");// zur Verschlüsselten Speicherung des Refresh Token
-const sharp = require('sharp');
-const FormData = require('form-data');
-const WebSocket = require ('ws');
-const exec = require('child_process').exec;
+const sharp = require('sharp');//schneidet das Bild zu
+const FormData = require('form-data');//um ein Bild per post hochzuladen
+const WebSocket = require ('ws');//websocket client
+const exec = require('child_process').exec;//run taskmanager for getting the Game runs 
 
 
 // definiere Globale Variablen
@@ -21,22 +21,24 @@ const access_token_time = 100 // per aktueller Definition ist die Gültigkeit de
 let auth_token ="";// Zwischenspeicher für den accesstoken - flüchtig mit Programm ende
 let refr_token ="";// gleiche für den refresh token
 let success_token = false;//dient als Merker für den erfolgreichen Loginalgorithmus
-const dev_log_log = './dev/log.log';
-const dev_game_log = './dev/Game.log';
-const game_process = 'chrome.exe';
+const dev_log_log = './dev/log.log';// url zum Logfile
+const dev_game_log = './dev/Game.log';//url zum Spiele Log
+const game_process = 'chrome.exe';//Name der Spieldatei
 const log_log = '\\RSILauncher\\log.log'; // suche hier nach der log datei
 const game_log = '\\Game.log'; // Dateiname für Gamelog Datei
-const my_access_url = myconfig.url+"api/token/refresh/";
-const my_refresh_url = myconfig.url+"api/token/";
-const my_register_url = myconfig.url+"api/register/";
-const my_reset_url = myconfig.url+"api/reset/";
-const my_uploadpic_url = myconfig.url+"api/files/images/";
-let log_path = '';
-let prog_path = '';
-let my_game_handle =myconfig.handle;
-let my_server_ip = '';
-let game_running = false;
-
+const my_access_url = myconfig.url+"api/token/refresh/";//url zur aktualisierung vom accesstoken
+const my_refresh_url = myconfig.url+"api/token/";// url zum einloggen
+const my_register_url = myconfig.url+"api/register/";//url zum registern
+const my_reset_url = myconfig.url+"api/reset/";// URL zum Password reset
+const my_uploadpic_url = myconfig.url+"api/files/images/";//url zum Image upload
+const my_ws_url = "ws://127.0.0.1/:8000/chat/"
+let log_path = '';//init variable zum log pfad
+let prog_path = '';// init variable zum game pfad
+let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
+let my_server_ip = '';//init variable zur IP Speicherung
+let game_running = false;// merker zum Spiel im Speicher
+let mywindow ;
+let childwindow;
 
 // Loginalgorithmus
 // Ist kein Token in der Datei config.json gespeichert dann rendere login request 
@@ -54,10 +56,10 @@ let game_running = false;
 
 //Funktion zum Überprüfen, ob das Game läuft
 function isRunning(proc){
-    return new Promise(function(resolve, reject){
-        exec('tasklist', function(err, stdout, stderr) {
-            if (err) reject(err);
-            resolve(stdout.toLowerCase().includes(proc.toLowerCase()));
+    return new Promise(function(resolve, reject){ //asynchroner aufruf
+        exec('tasklist', function(err, stdout, stderr) {// rufe externes Programm tasklist auf
+            if (err) reject(err);// wenn Feher dann schlecht
+            resolve(stdout.toLowerCase().includes(proc.toLowerCase()));// existiert ein Task, der wie das Game heisst ?
         })
     })
 };
@@ -97,8 +99,8 @@ function init_log(){
 };
 
 //Funktion zur Erzeugung einer FensterKlasse
-function createMainWindow(){
-    mainWindow = new BrowserWindow({//vererbt von Chomium
+async function createMainWindow(){
+    mywindow = new BrowserWindow({//vererbt von Chomium
         width: 500,//Fenstebreite
         height:350,//Fensterhöhe
         frame: false,//Rahmenlos
@@ -110,31 +112,10 @@ function createMainWindow(){
             contextIsolation: true,//auch der Kontext an sich ist nicht für die Aussenwelt verfügbar
         }
     });
-    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (url !== 'about:blank'){
-            return {
-                action: 'allow',
-                overrideBrowserWindowOptions:{
-                    width:500,
-                    height:350,
-                    frame:false,
-                    fullscreenable:false,
-                    transparent:true,
-                    resizable:true,
-                    alwaysOnTop:true,
-                    webPreferences:{
-                        preload:path.join(__dirname,'preload.js'),
-                        contextIsolation: true,
-                    }
-                }
-            }
-        }
-        return { action:'deny'}
-    });
     if (success_token){// wurde der Loginprozess erfolgreich abgeschlossen ?
-        mainWindow.loadFile(path.join(__dirname,'./renderer/main.html'));//ja weiter mit der App
+        mywindow.loadFile(path.join(__dirname,'./renderer/main.html'));//ja weiter mit der App
     } else {//nein
-        mainWindow.loadFile(path.join(__dirname,'./renderer/index.html'));//somit bitte Login renderen
+        mywindow.loadFile(path.join(__dirname,'./renderer/index.html'));//somit bitte Login renderen
     };
     //return mainWindow;
 }
@@ -142,10 +123,10 @@ function createMainWindow(){
 //Funktion zur Ermittlung des Installationsverzeichnisses von Star Citizen 
 function getthelogs() {
     return new Promise(function(resolve,reject){ // da JS asynchron abläuft müssen wir hier die Abarbeitung abwarten mit einem Promise
-        if (myconfig.node_env !== "production"){
+        if (myconfig.node_env !== "production"){// wenn im dev mode nimm die Dateien im dev Verzeichnis
             route = "./dev/log.log";
         } else {
-            route = log_path+log_log;
+            route = log_path+log_log;// in Produktion suche danach
         };
         fs.readFile(route, 'utf8',(err,mzdata) => {//lies die Datei ein und gib den Inhalt zurück
             if (err){// haben wir einen Fehler?
@@ -160,26 +141,22 @@ function getthelogs() {
 )};
 
 //Nun suche und lese die Game.log Datei - gleicher Aufbau wie bei der Log.log Datei siehe eine Funktion zuvor
-function getthegame(mypath) {
-    return new Promise(function(resolve,reject){
-        if (game_running){
-            if (myconfig.node_env !== "production"){
-                route="./dev/Game.log";
-            } else {
-                route = mypath+game_log;
-            };
-            fs.readFile(route, 'utf8',(err,tzdata) => {
-                if (err){
-                    log.error('shit happens didnt read the game file: Game.log');
-                    reject(err);
-                } else{
-                    log.info('hurray read the game file: Game.log');
-                    resolve(tzdata);
-                }
-            })
+function getthegame(mypath) {//habe den Pfad  erhalten
+    return new Promise(function(resolve,reject){//arbeite weiter synchron
+        if (myconfig.node_env !== "production"){//wenn nicht in Produktion, dann 
+            route="./dev/Game.log";//nimm die dev Dateien
         } else {
-            resolve(game_running);
-        }
+            route = mypath+game_log;// suche nach der log
+        };
+        fs.readFile(route, 'utf8',(err,tzdata) => {// lies die Datei ein
+            if (err){// Fehler ist schlecht
+                log.error('shit happens didnt read the game file: Game.log');
+                reject(err);// geht auf Fehler stopp
+            } else{// alles gelesen 
+                log.info('hurray read the game file: Game.log');
+                resolve(tzdata);// gib diese Daten Weiter
+            }
+        })
     })
 };
 
@@ -259,18 +236,18 @@ function searchgamehandle(bvdata){
                     let bb = helper[3].indexOf(']');
                     let xxx = helper[3].substring(0,bb);
                     log.info(xxx);// logge das handle
-                    if (typeof my_game_handle !== 'undefined'){
+                    if (typeof my_game_handle !== 'undefined'){//ohne Game handle gibt es nicht lösbare Abhängigkeiten. Somit ist eines notwnedig
                         if (xxx !== my_game_handle) {
                             log.error(`Schwer wiegender Fehler Game Handle stimmen nicht ueberein! gespeichert: ${my_game_handle} | vom Game: ${xxx}` );
                             reject("Game Handle mismatch - Abbruch");
                         }
-                    } else {
+                    } else {// habdle ist da somit weiter
                         my_game_handle = xxx;
                         myconfig.handle=xxx;
                         log.info('Game Handle war noch nicht gespeichert - Hole nach!');
                         fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
                     }
-                    resolve(gesplittet);//Rückgabe dessen
+                    resolve(gesplittet);//weitergabe der Daten aus game.log für IP finden
                 }
                 if (x<=0){//upps dateiende Erreicht und nnix gefunden somit Fehler
                     T = false;
@@ -415,10 +392,7 @@ function startwindow(){
             clipboardchanged(mytext);// Auswertung mittels Funktion
         };
     });
-    app.whenReady().then(() => {// installiere Eventhandler App ready
-        mywindow=createMainWindow();// erzeuge Neues Fenster
-    })
-    return mywindow
+    app.on('ready',createMainWindow())// erzeuge Neues Fenster
 };
 
 // alles mit erfolg abgelaufen????????
@@ -562,7 +536,7 @@ check_game_is_running()
     .then(searchgamehandle)
     .then(searchip)
     .then(config_token)
-    .then(mywindow=onsuccess,onerror);// alles gut dann weiter sonst Fehelr
+    .then(onsuccess,onerror);// alles gut dann weiter sonst Fehelr
 
 ipcMain.on("login_user", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier Login Button gedrückt
     log.info(`got clicked data login : ${args}`);
@@ -643,7 +617,16 @@ ipcMain.on("reset_user_pw", (event,args) =>{//KontextBridge zum Renderer Prozess
 ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier öffne Chat Fenster
     log.info(`got checkbox 1 clicked signal is: ${args}`);
     if (args === 'True'){
-        wss = new webSocket(my_ws_url,{
+        childwindow = new BrowserWindow({modal:true, show:false})
+        childwindow.loadFile('./renderer/chat.html');
+        childwindow.once('ready-to-show',() => {
+            childwindow.show();
+        });
+        childwindow.on('close',() =>{
+            log.info('Got child windows closed');
+            mywindow.webContents.send('window:closed','Error Status: Window Cloased Detail : none ');
+        });
+        wss = new WebSocket(my_ws_url,{
             perMessageDeflate:false,
         });
         wss.on('error',(error) => {
@@ -663,7 +646,10 @@ ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier
         })
     } else {
         wss.close();
-    }
+        if (childwindow !== 'undefined'){
+            childwindow.close();
+        };
+    };
 });
 
 

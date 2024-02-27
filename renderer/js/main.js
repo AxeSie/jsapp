@@ -4,11 +4,8 @@ function myfunction(){
     let ans ='';
     if (el1.checked === true){
         ans='True';
-        childWindow = window.open('./chat.html','modal');
-        ///modal.loadFile(`./renderer/chat.html`);
     } else {
         ans='False';
-        childWindow.close();
     };
     window.ipcRender.send("check1",ans);
 };
@@ -19,3 +16,7 @@ if (el1) {
     el1.addEventListener('click', myfunction);
 }
 
+window.ipcRender.receive('window:closed',(text) => {
+    el1.checked = false;
+    console.log('click got from main');
+});
