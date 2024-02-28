@@ -10,8 +10,9 @@
   "top": 100,
   "width": 500,
   "height": 900,
-  "x":1000,
-  "y":50,
+  "win_name": "ISR Tool",
+  "x": 1000,
+  "y": 50,
   "handle": "RudRud",
-  "token": "U2FsdGVkX18lHSVDWg3gwWhrGbdEwYIAMGKpVlv/IJ+l3IGjXWTJJSlq50zjR7rW/FNoabycRQfyFcGpnz4qgk6XCEslfPDyecFeJjbgQZKzI3O9sLcWOTVfe12gI3UyRZbgIZwhS8dG5JJxuo0OAqzU+0gjjBV9CcBfHTAVmJ7mdMM2jlcDO3jtVgIuc0ms7z1eZxWd5Ug5vEGeCRU2j4d0vSZM5bysnTsjtvEx4EglGSJqjD/LoA+CLSAT6kVNSNotxbXUFAEvEMfYgBTQuCtOuInpOYyZLgkCpfaD6L/pGl/m0S3SE1KCppiRBQaICWx+2XVg1xTrAeZe78+Y5w=="
+  "token": "U2FsdGVkX1+AhKJAMFHW7zYR7w/VmT+XGy43S/aM6I5e8hVvfCRVmRhr7gLp34U+w7em5hqVfbr0p0ZashTFOxy5JGivdh+vB4+nO4Rr8OIrNu/+JstUQt5QU4axj8/ZdN29Yi8ZXdecyR5h1SnGVJy5MqcmBPzyTJBqAtGOf/eQmJ5jlnpMLarTmfDXi9Bjv+AYKSBdGYl/yheNejEu2zgYea1l5hS/prrMAsIFCwD42Ng7y58S/nHm6rzjfg46AjWedkXziYGW4xX3sMDmyqT9FcnIO70b+CAVM8gCrxH+Olg9GmS7lQUBtlXA28py8hfKAaigCHNKgltW+KpRZg=="
 }

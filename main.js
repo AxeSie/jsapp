@@ -14,6 +14,7 @@ const FormData = require('form-data');//um ein Bild per post hochzuladen
 const WebSocket = require ('ws');//websocket client
 const exec = require('child_process').exec;//run taskmanager for getting the Game runs 
 const { windowManager } = require ('node-window-manager');
+const { start } = require('repl');
 
 // definiere Globale Variablen
 let lauf = 0; // Laufzeit für die Gültigkeit des Access Tokens - wenn kurz for Ablauf bitte an der API erneuern lassen
@@ -31,7 +32,8 @@ const my_refresh_url = myconfig.url+"api/token/";// url zum einloggen
 const my_register_url = myconfig.url+"api/register/";//url zum registern
 const my_reset_url = myconfig.url+"api/reset/";// URL zum Password reset
 const my_uploadpic_url = myconfig.url+"api/files/images/";//url zum Image upload
-const my_ws_url = "ws://127.0.0.1:8000/ws"
+const my_ws_url = "ws://127.0.0.1:8000/ws/jette/";
+const my_get_ws_uuid = myconfig.url+'/jette/auth';
 const mybounds = {x:myconfig.x,y:myconfig.y};
 let log_path = '';//init variable zum log pfad
 let prog_path = '';// init variable zum game pfad
@@ -43,6 +45,7 @@ let childwindow;
 let myaktwind;
 let tail;
 let ws;
+let uuid;
 
 
 
@@ -390,7 +393,6 @@ function get_new_access(refrtok){
             log.error(`got Error response login Data: ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
             success_token = false;
             log.warn(`I think Refreshtoken expired - lets try to log in again`);
-            mywindow.webContents.send('message:update',`Error Status: ${error.response.status} Detail : ${JSON.stringify(error.response.data)} `);
             if (typeof mywindow !== 'undefined'){
                 link = "./renderer/index.html";
                 mywindow.loadFile(link);//somit bitte Login renderen    
@@ -478,8 +480,12 @@ function check_game_is_running(){
 function get_actual_window(){
     return new Promise(function(resolve,reject){
         myaktwind = windowManager.getActiveWindow();
-        myaktwind.setBounds(mybounds);
-        log.info('did set Window Bounds');
+        if (myaktwind.getTitle() === myconfig.win_name){
+            myaktwind.setBounds(mybounds);
+            log.info(`did set Window Bounds : ${myaktwind.getTitle()}`);
+        } else {
+            log.info(`Got wrong Window ${myaktwind.getTitle()}`);
+        };
         resolve(true);
     })
 };
@@ -492,6 +498,48 @@ function heartbeat(){
         log.error('Lost Connection to Websocket Server')
     }, 30000 + 1000);
 };
+
+// websocket handling
+function starte_ws(){
+    axios// post zur backendAPI
+    .get(my_get_ws_uuid,args,{
+        timeout:5000,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer '+auth_token,
+        }})
+    .then(function(response){// Erfolg speichere neue Tokense
+        log.info(`got answerfrom get uuid: ${response} `);
+        uuid = response.uudi;
+        ws = new WebSocket(my_ws_url+'?'+uuid,{
+            perMessageDeflate:false,
+        });
+        ws.on('error',(error) => {
+            log.error(`Got Websocket Error : ${error}`);
+        });
+        ws.on('open', heartbeat);
+        ws.on('ping', heartbeat);     
+        ws.on('close',function clear() {
+            log.info('Websocket closed');
+            clearTimeout(this.pingTimeout);
+        });
+        ws.on('message',function message (data){
+            log.info(`Got message over Websockets : ${data}`);
+        response(true);
+    })
+    .catch(function(error){// im Fehlerfall error
+        if (error.code === 'ECONNABORTED'){
+            log.error('Request an Backend Get WS UUID timed out');
+        } else {
+            log.error(`got Error response get WS UUID: ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
+        }
+    });
+    })
+};
+
+
+
+
 
 // hier startet das eigentliche Programm
 init_log();
@@ -515,9 +563,6 @@ check_game_is_running()
         get_actual_window();
         tail = new Tail (prog_path+'\\Game.log');// überwache das Dateiende von Game.log mit einem Event
         clipboardListener.startListening();// setze den Eventhandler zum Clipboard überwachen
-        ws = new WebSocket(my_ws_url,{
-            perMessageDeflate:false,
-        });
         clipboardListener.on('change',() => {// bei Event
             let buffer = clipboard.readImage().toPNG();// lies doch einfach mal ein Bild ein
             log.info (`Picture Buffer typer : ${buffer.length}`);
@@ -549,23 +594,6 @@ check_game_is_running()
             };
         });
 
-        ws.on('error',(error) => {
-            log.error(`Got Websocket Error : ${error}`);
-        });
-                
-        ws.on('open', heartbeat);
-
-        ws.on('ping', heartbeat);
-                
-        ws.on('close',function clear() {
-            log.info('Websocket closed');
-            clearTimeout(this.pingTimeout);
-        });
-                
-        ws.on('message',function message (data){
-            log.info(`Got message over Websockets : ${data}`);
-        })
-
         tail.on('line', (linelog) => {
             log.info('log file changed:'+linelog);
             logfilechanged(linelog); // rufe den eventhanlder auf
@@ -576,6 +604,7 @@ check_game_is_running()
         }); 
 
     });// alles gut dann weiter sonst Fehelr
+
 
 app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende auch die App
     if (process.platform !== 'darwin') app.quit()
