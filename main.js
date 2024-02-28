@@ -13,7 +13,7 @@ const sharp = require('sharp');//schneidet das Bild zu
 const FormData = require('form-data');//um ein Bild per post hochzuladen
 const WebSocket = require ('ws');//websocket client
 const exec = require('child_process').exec;//run taskmanager for getting the Game runs 
-
+const { windowManager } = require ('node-window-manager');
 
 // definiere Globale Variablen
 let lauf = 0; // Laufzeit für die Gültigkeit des Access Tokens - wenn kurz for Ablauf bitte an der API erneuern lassen
@@ -31,7 +31,8 @@ const my_refresh_url = myconfig.url+"api/token/";// url zum einloggen
 const my_register_url = myconfig.url+"api/register/";//url zum registern
 const my_reset_url = myconfig.url+"api/reset/";// URL zum Password reset
 const my_uploadpic_url = myconfig.url+"api/files/images/";//url zum Image upload
-const my_ws_url = "ws://127.0.0.1/:8000/chat/"
+const my_ws_url = "ws://127.0.0.1:8000/ws"
+const mybounds = {x:myconfig.x,y:myconfig.y};
 let log_path = '';//init variable zum log pfad
 let prog_path = '';// init variable zum game pfad
 let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
@@ -39,6 +40,11 @@ let my_server_ip = '';//init variable zur IP Speicherung
 let game_running = false;// merker zum Spiel im Speicher
 let mywindow ;
 let childwindow;
+let myaktwind;
+let tail;
+let ws;
+
+
 
 // Loginalgorithmus
 // Ist kein Token in der Datei config.json gespeichert dann rendere login request 
@@ -102,7 +108,7 @@ function init_log(){
 async function createMainWindow(){
     mywindow = new BrowserWindow({//vererbt von Chomium
         width: 500,//Fenstebreite
-        height:350,//Fensterhöhe
+        height:600,//Fensterhöhe
         frame: false,//Rahmenlos
         transparent: true,//transparent
         resizeable : true,//zoombar
@@ -351,61 +357,18 @@ function logfilechanged(data){
     }
 };
 
-//Eventhandler für den Fenster fertig event
-function startwindow(){
-    tail = new Tail (prog_path+'\\Game.log');// überwache das Dateiende von Game.log mit einem Event
-    tail.on('line', (linelog) => {
-        log.info('log file changed:'+linelog);
-        logfilechanged(linelog); // rufe den eventhanlder auf
-    });
-    tail.on('error', (error) => {// bei fehler
-        log.error('log file changed:'+error);
-    });        
-    clipboardListener.startListening();// setze den Eventhandler zum Clipboard überwachen
-    clipboardListener.on('change',() => {// bei Event
-        let buffer = clipboard.readImage().toPNG();// lies doch einfach mal ein Bild ein
-        log.info (`Picture Buffer typer : ${buffer.length}`);
-        if (buffer.length > 0){
-            const img = sharp(buffer)
-            let img_path = `./renderer/images/sendtobackend/output${Date.now()}.png`;
-            img.metadata()
-            .then(function (metadata){
-                log.info(`Bild Weite: ${metadata.width} , Höhe: ${metadata.height}`);
-                if ((myconfig.screen_width === metadata.width)&&(myconfig.screen_height === metadata.height)){
-                        log.info("Image Größe bekannt - Schnittmuster bekannt");
-                        sharp(buffer).extract({left:myconfig.left,top:myconfig.top,width:myconfig.width,height:myconfig.height})
-                        .toFile(img_path)
-                        .then(info => { 
-                            log.info(`Datei geschrieben : ${info}`);
-                            sende_img(img_path);
-                        })
-                        .catch(err =>{
-                            log.error(`Fehler beim Datei schreiben : ${err}`)
-                        });
-                } else {
-                    log.error("Image Größe unbekannt bzw Schnittmuster unbekannt  - bitte korrigieren - ");
-                };
-            });
-        } else {
-            const mytext = clipboard.readText('clipboard');// und versuch es mi einem Text
-            log.info(`Text from Clipboard : ${mytext}`)
-            clipboardchanged(mytext);// Auswertung mittels Funktion
-        };
-    });
-    app.on('ready',createMainWindow())// erzeuge Neues Fenster
-};
-
 // alles mit erfolg abgelaufen????????
-function onsuccess(){ 
+function onsuccess(v){ 
     log.info('Alle Vorbereitungen abgeschlossen ---- auf zum Start');  
-    return startwindow();
-}
+    app.whenReady().then(() => {
+        createMainWindow()});
+};
 
 // oder gab es in der Kette einen Fehler
 function onerror(err){
     log.error(`Ich habe Error: ${err}`);
     process.exit();
-}
+};
 
 //Funktion um einen neuen Accesstoken zu erhalten
 function get_new_access(refrtok){
@@ -427,6 +390,7 @@ function get_new_access(refrtok){
             log.error(`got Error response login Data: ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
             success_token = false;
             log.warn(`I think Refreshtoken expired - lets try to log in again`);
+            mywindow.webContents.send('message:update',`Error Status: ${error.response.status} Detail : ${JSON.stringify(error.response.data)} `);
             if (typeof mywindow !== 'undefined'){
                 link = "./renderer/index.html";
                 mywindow.loadFile(link);//somit bitte Login renderen    
@@ -510,6 +474,17 @@ function check_game_is_running(){
     })
 };
 
+//handle zum aktuellen Fenster
+function get_actual_window(){
+    return new Promise(function(resolve,reject){
+        myaktwind = windowManager.getActiveWindow();
+        myaktwind.setBounds(mybounds);
+        log.info('did set Window Bounds');
+        resolve(true);
+    })
+};
+
+
 function heartbeat(){
     clearTimeout(this.pingTimeout);
     this.pingTimeout = setTimeout(() => {
@@ -519,7 +494,6 @@ function heartbeat(){
 };
 
 // hier startet das eigentliche Programm
-
 init_log();
 const timer_id = setInterval(() => {//rufe den Timer auf
     check_game_is_running();
@@ -536,7 +510,76 @@ check_game_is_running()
     .then(searchgamehandle)
     .then(searchip)
     .then(config_token)
-    .then(onsuccess,onerror);// alles gut dann weiter sonst Fehelr
+    .then(onsuccess,onerror)
+    .finally(function(){
+        get_actual_window();
+        tail = new Tail (prog_path+'\\Game.log');// überwache das Dateiende von Game.log mit einem Event
+        clipboardListener.startListening();// setze den Eventhandler zum Clipboard überwachen
+        ws = new WebSocket(my_ws_url,{
+            perMessageDeflate:false,
+        });
+        clipboardListener.on('change',() => {// bei Event
+            let buffer = clipboard.readImage().toPNG();// lies doch einfach mal ein Bild ein
+            log.info (`Picture Buffer typer : ${buffer.length}`);
+            if (buffer.length > 0){
+                const img = sharp(buffer)
+                let img_path = `./renderer/images/sendtobackend/output${Date.now()}.png`;
+                img.metadata()
+                .then(function (metadata){
+                    log.info(`Bild Weite: ${metadata.width} , Höhe: ${metadata.height}`);
+                    if ((myconfig.screen_width === metadata.width)&&(myconfig.screen_height === metadata.height)){
+                            log.info("Image Größe bekannt - Schnittmuster bekannt");
+                            sharp(buffer).extract({left:myconfig.left,top:myconfig.top,width:myconfig.width,height:myconfig.height})
+                            .toFile(img_path)
+                            .then(info => { 
+                                log.info(`Datei geschrieben : ${info}`);
+                                sende_img(img_path);
+                            })
+                            .catch(err =>{
+                                log.error(`Fehler beim Datei schreiben : ${err}`)
+                            });
+                    } else {
+                        log.error("Image Größe unbekannt bzw Schnittmuster unbekannt  - bitte korrigieren - ");
+                    };
+                });
+            } else {
+                const mytext = clipboard.readText('clipboard');// und versuch es mi einem Text
+                log.info(`Text from Clipboard : ${mytext}`)
+                clipboardchanged(mytext);// Auswertung mittels Funktion
+            };
+        });
+
+        ws.on('error',(error) => {
+            log.error(`Got Websocket Error : ${error}`);
+        });
+                
+        ws.on('open', heartbeat);
+
+        ws.on('ping', heartbeat);
+                
+        ws.on('close',function clear() {
+            log.info('Websocket closed');
+            clearTimeout(this.pingTimeout);
+        });
+                
+        ws.on('message',function message (data){
+            log.info(`Got message over Websockets : ${data}`);
+        })
+
+        tail.on('line', (linelog) => {
+            log.info('log file changed:'+linelog);
+            logfilechanged(linelog); // rufe den eventhanlder auf
+        });
+
+        tail.on('error', (error) => {// bei fehler
+            log.error('log file changed:'+error);
+        }); 
+
+    });// alles gut dann weiter sonst Fehelr
+
+app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende auch die App
+    if (process.platform !== 'darwin') app.quit()
+});
 
 ipcMain.on("login_user", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier Login Button gedrückt
     log.info(`got clicked data login : ${args}`);
@@ -626,38 +669,9 @@ ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier
             log.info('Got child windows closed');
             mywindow.webContents.send('window:closed','Error Status: Window Cloased Detail : none ');
         });
-        wss = new WebSocket(my_ws_url,{
-            perMessageDeflate:false,
-        });
-        wss.on('error',(error) => {
-            log.error(`Got Websocket Error : ${error}`);
-        });
-            
-        wss.on('open', heartbeat);
-        wss.on('ping', heartbeat);
-            
-        wss.on('close',function clear() {
-            log.info('Websocket closed');
-            clearTimeout(this.pingTimeout);
-        });
-            
-        wss.on('message',function message (data){
-            log.info(`Got message over Websockets : ${data}`);
-        })
     } else {
-        wss.close();
         if (childwindow !== 'undefined'){
             childwindow.close();
         };
     };
 });
-
-
-
-app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende auch die App
-    if (process.platform !== 'darwin') app.quit()
-});
-
-
-// Programm Ende
-
