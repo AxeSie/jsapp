@@ -1,0 +1,51 @@
+.grid-container{
+    display:grid;
+    grid-template-columns: 50px,300px,1fr;
+    padding-top: 5px;
+    gap:3px;
+    grid-template-areas: 
+    "eins drei sechs"
+    "eins vier sechs"
+    "zwei fuenf sechs"
+    ;
+
+}
+
+.links_oben{
+    background-color: rgba(2, 3, 82, 0.5);
+    grid-area: eins;
+    min-height: 400px;
+}
+
+.links_unten{
+    min-height: 10%;
+    background-color: rgba(2, 3, 82, 0.5);
+    grid-area: zwei;
+    
+}
+.mitte_oben{
+    min-height: 200px;
+    background-color: rgba(2, 3, 82, 0.5);
+    grid-area: drei;
+    
+}
+
+.mitte_mitte{
+    min-width: 40%;
+    background-color: rgba(2, 3, 82, 0.5);
+    grid-area: vier;
+    
+}
+
+.mitte_unten{
+    background-color: rgba(2, 3, 82, 0.5);
+    grid-area: fuenf;
+    
+}
+
+.rechts{
+    min-width: 20%;
+    background-color: rgba(2, 3, 82, 0.5);
+    grid-area: sechs;
+    
+}
