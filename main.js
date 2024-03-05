@@ -40,6 +40,7 @@ let prog_path = '';// init variable zum game pfad
 let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
 let my_server_ip = '';//init variable zur IP Speicherung
 let game_running = false;// merker zum Spiel im Speicher
+let my_user = myconfig.user;
 let mywindow ;
 let childwindow;
 let myaktwind;
@@ -611,7 +612,7 @@ app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende au
 });
 
 ipcMain.on("login_user", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier Login Button gedrückt
-    log.info(`got clicked data login : ${args}`);
+    log.info(`got clicked data login : ${args.username}`);
     axios// post zur backendAPI
         .post(my_refresh_url,args,{
             timeout:5000,
@@ -636,12 +637,15 @@ ipcMain.on("login_user", (event,args) =>{//KontextBridge zum Renderer Prozess - 
 });
 
 ipcMain.on("register_new_user", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier Register Button gedrückt
-    log.info(`got clicked data register : ${args}`);
-    my_game_handle = args.gamehandle;
+    let mm = JSON.parse(args);
+    log.info(`got clicked data register : ${mm.username}`);
+    my_game_handle = mm.last_name;
     myconfig.handle = my_game_handle;
+    myconfig.user = mm.username;
+    my_user = myconfig.user;
     fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Date
     axios// post zur backendAPI
-        .post(my_register_url,args,{
+        .post(my_register_url,mm,{
             timeout:5000,
             headers: {
                 'Content-Type': 'application/json',

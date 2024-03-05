@@ -8,12 +8,17 @@ function myfunction(){
 };
 
 function myfunction2(){
-    var mypayload = {
-        "username":uname.value,
-        "email":email.value,
-        "password":passw.value
-    }
-    window.ipcRender.send("register_new_user",JSON.stringify(mypayload));
+    if (!hp1 || !hp2){
+        var mypayload = {
+            "username":uname.value,
+            "email":email.value,
+            "password":passw.value,
+            "last_name":gamehandle.value
+        }    
+        window.ipcRender.send("register_new_user",JSON.stringify(mypayload));
+    } else {
+        text.innerText = "Problem Bot am Werk rejected";
+    };
 };
 
 function myfunction3(){
@@ -23,6 +28,8 @@ function myfunction3(){
     window.ipcRender.send("reset_user_pw",JSON.stringify(mypayload));
 };
 
+const hp1 = document.getElementById("ht");
+const hp2 = document.getElementById("ht1");
 const uname = document.getElementById("user");
 const passw = document.getElementById("pass");
 const email = document.getElementById("email");
