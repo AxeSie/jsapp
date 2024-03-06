@@ -33,7 +33,7 @@ const my_register_url = myconfig.url+"api/register/";//url zum registern
 const my_reset_url = myconfig.url+"api/reset/";// URL zum Password reset
 const my_uploadpic_url = myconfig.url+"api/files/images/";//url zum Image upload
 const my_ws_url = "ws://127.0.0.1:8000/ws/jette/";
-const my_get_ws_uuid = myconfig.url+'/jette/auth';
+const my_get_ws_uuid = myconfig.url+'jette/api/auth';
 const mybounds = {x:myconfig.x,y:myconfig.y};
 let log_path = '';//init variable zum log pfad
 let prog_path = '';// init variable zum game pfad
@@ -494,6 +494,7 @@ function get_actual_window(){
 
 function heartbeat(){
     clearTimeout(this.pingTimeout);
+    log.info('got Heartbeat from backend for ws');
     this.pingTimeout = setTimeout(() => {
         this.terminate();
         log.error('Lost Connection to Websocket Server')
@@ -503,38 +504,39 @@ function heartbeat(){
 // websocket handling
 function starte_ws(){
     axios// post zur backendAPI
-    .get(my_get_ws_uuid,args,{
-        timeout:5000,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer '+auth_token,
-        }})
-    .then(function(response){// Erfolg speichere neue Tokense
-        log.info(`got answerfrom get uuid: ${response} `);
-        uuid = response.uudi;
-        ws = new WebSocket(my_ws_url+'?'+uuid,{
-            perMessageDeflate:false,
-        });
-        ws.on('error',(error) => {
-            log.error(`Got Websocket Error : ${error}`);
-        });
-        ws.on('open', heartbeat);
-        ws.on('ping', heartbeat);     
-        ws.on('close',function clear() {
-            log.info('Websocket closed');
-            clearTimeout(this.pingTimeout);
-        });
-        ws.on('message',function message (data){
-            log.info(`Got message over Websockets : ${data}`);
-        response(true);
-    })
-    .catch(function(error){// im Fehlerfall error
-        if (error.code === 'ECONNABORTED'){
-            log.error('Request an Backend Get WS UUID timed out');
-        } else {
-            log.error(`got Error response get WS UUID: ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
-        }
-    });
+        .get(my_get_ws_uuid,{
+            timeout:5000,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer '+auth_token,
+            }})
+        .catch((error) => {// im Fehlerfall error
+            if (error.code === 'ECONNABORTED'){
+                log.error('Request an Backend Get WS UUID timed out');
+            } else {
+                log.error(`got Error response get WS UUID: ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
+            }
+        })
+        .then((response) => {// Erfolg speichere neue Tokense
+            log.info(`got answerfrom get uuid: ${response.data['uuid']} `);
+            uuid = response.data['uuid'];
+            log.info(`made out of it: ${uuid} `);
+            ws = new WebSocket(my_ws_url+'start/?uuid='+uuid,{
+                perMessageDeflate:false,
+            });
+            ws.on('error',(error) => {
+                log.error(`Got Websocket Error : ${error}`);
+            });
+            ws.on('open', heartbeat);
+            ws.on('ping', heartbeat);     
+            ws.on('close',function clear() {
+                log.info('Websocket closed');
+                clearTimeout(this.pingTimeout);
+            });
+            ws.on('message',function message (data){
+                log.info(`Got message over Websockets : ${data}`);
+            return response(true);
+        })
     })
 };
 
@@ -693,18 +695,21 @@ ipcMain.on("reset_user_pw", (event,args) =>{//KontextBridge zum Renderer Prozess
 ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier öffne Chat Fenster
     log.info(`got checkbox 1 clicked signal is: ${args}`);
     if (args === 'True'){
-        childwindow = new BrowserWindow({modal:true, show:false})
-        childwindow.loadFile('./renderer/chat.html');
-        childwindow.once('ready-to-show',() => {
-            childwindow.show();
-        });
-        childwindow.on('close',() =>{
-            log.info('Got child windows closed');
-            mywindow.webContents.send('window:closed','Error Status: Window Cloased Detail : none ');
-        });
-    } else {
-        if (childwindow !== 'undefined'){
-            childwindow.close();
-        };
+        starte_ws();
+    }else{
+       ws.close(); 
     };
 });
+
+
+///child window
+///childwindow = new BrowserWindow({modal:true, show:false})
+///        childwindow.loadFile('./renderer/chat.html');
+///        childwindow.once('ready-to-show',() => {
+//            childwindow.show();
+//        });
+//        childwindow.on('close',() =>{
+
+//log.info('Got child windows closed');
+//            mywindow.webContents.send('window:closed','Error Status: Window Cloased Detail : none ');
+//        });
