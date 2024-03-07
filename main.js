@@ -33,14 +33,13 @@ const my_register_url = myconfig.url+"api/register/";//url zum registern
 const my_reset_url = myconfig.url+"api/reset/";// URL zum Password reset
 const my_uploadpic_url = myconfig.url+"api/files/images/";//url zum Image upload
 const my_ws_url = "ws://127.0.0.1:8000/ws/jette/";
-const my_get_ws_uuid = myconfig.url+'jette/api/auth';
+const my_get_ws_uuid = myconfig.url+'jette';
 const mybounds = {x:myconfig.x,y:myconfig.y};
 let log_path = '';//init variable zum log pfad
 let prog_path = '';// init variable zum game pfad
 let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
 let my_server_ip = '';//init variable zur IP Speicherung
 let game_running = false;// merker zum Spiel im Speicher
-let my_user = myconfig.user;
 let mywindow ;
 let childwindow;
 let myaktwind;
@@ -643,8 +642,6 @@ ipcMain.on("register_new_user", (event,args) =>{//KontextBridge zum Renderer Pro
     log.info(`got clicked data register : ${mm.username}`);
     my_game_handle = mm.last_name;
     myconfig.handle = my_game_handle;
-    myconfig.user = mm.username;
-    my_user = myconfig.user;
     fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Date
     axios// post zur backendAPI
         .post(my_register_url,mm,{
