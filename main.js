@@ -613,7 +613,8 @@ app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende au
 });
 
 ipcMain.on("login_user", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier Login Button gedrückt
-    log.info(`got clicked data login : ${args.username}`);
+    let mm = JSON.parse(args);
+    log.info(`got clicked data login : ${mm.username}`);
     axios// post zur backendAPI
         .post(my_refresh_url,args,{
             timeout:5000,
