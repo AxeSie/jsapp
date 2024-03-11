@@ -4,6 +4,10 @@
   "version": "0.0.2",
   "description": "first blood",
   "main": "main.js",
+  "repository":{
+    "type": "git",
+    "url": "https//github.com/AxeSie/jsapp.git"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder build --win --publish never",
@@ -20,10 +24,6 @@
         "nsis"
       ],
       "icon": "icon.ico"
-    },
-    "repository":{
-      "type": "git",
-      "url": "https//github.com/AxeSie/jsapp.git"
     },
     "nsis": {
       "oneClick": false,
