@@ -40,6 +40,7 @@ let prog_path = '';// init variable zum game pfad
 let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
 let my_server_ip = '';//init variable zur IP Speicherung
 let game_running = false;// merker zum Spiel im Speicher
+let allow_dev_tools = myconfig.dev_tools_allowed;
 let mywindow ;
 let childwindow;
 let myaktwind;
@@ -101,7 +102,7 @@ function init_log(){
         log.transports.console.level = myconfig.level;//Level aus Config für Konsole
         log.transports.file.level = myconfig.level;//Level für File aus Config
     };
-    if (myconfig.debug !== 'true'){// Ich möchte login komplett abstellen somit alles flase
+    if (myconfig.logging !== 'true'){// Ich möchte login komplett abstellen somit alles flase
         log.transports.file.level = false;
         log.transports.console.level = false;
     };
@@ -119,6 +120,11 @@ async function createMainWindow(){
         webPreferences:{//Verhalten in die Welt ( aus diversen Gründen wird die App mit vollem Computerzugriff vom Renderer Prozess abgekapselt)
             preload: path.join(__dirname,'preload.js'),// keinen Direkten Aussenweltkontakt - dieser erfolgt über eine Kontextbrücke ( Sicherheitsrelevant)
             contextIsolation: true,//auch der Kontext an sich ist nicht für die Aussenwelt verfügbar
+            if dev_tools_allowed ==="true"{
+                devTools:true;
+            } else{
+                devTools:false;
+            }
         }
     });
     if (success_token){// wurde der Loginprozess erfolgreich abgeschlossen ?

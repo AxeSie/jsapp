@@ -1,12 +1,32 @@
 {
-  "name": "fgorinoimkartell",
+  "name": "isrtooling",
   "productName": "ISR Tool",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "first blood",
   "main": "main.js",
   "scripts": {
-    "start": "electron . --trace-warnings"
+    "start": "electron .",
+    "build": ""
   },
+
+  "build":{
+    "appId":"ISRTooling",
+    "win":{
+      "target":[
+        "nsis"
+      ],
+      "icon":"icon.ico"
+    },
+    "nsis":{
+      "oneClick":false,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon":"icon.ico",
+      "uninstallDisplayName":"ISRTooling-Uninstaller",
+      "license":"license.md",
+      "allowToChangeInstallationDirectory":true
+    }
+  },
+
   "author": "RudiRuder",
   "license": "MIT",
   "dependencies": {
@@ -22,5 +42,8 @@
     "tail": "^2.2.6",
     "utf-8-validate": "^6.0.3",
     "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.13.3"
   }
 }
