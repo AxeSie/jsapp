@@ -1,7 +1,7 @@
 {
   "name": "isrtooling",
   "productName": "ISR Tool",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "first blood",
   "main": "main.js",
   "scripts": {
@@ -11,6 +11,7 @@
   },
   "build": {
     "appId": "ISRTooling",
+    "asar":false,
     "files": [
       "**/*"
     ],
@@ -19,6 +20,10 @@
         "nsis"
       ],
       "icon": "icon.ico"
+    },
+    "repository":{
+      "type": "git",
+      "url": "https//github.com/AxeSie/jsapp.git"
     },
     "nsis": {
       "oneClick": false,
