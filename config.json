@@ -3,7 +3,7 @@
   "logging": "true",
   "level_dev": "debug",
   "level_prod": "error",
-  "dev_tools_allowed":"false",
+  "dev_tools_erlaubt": "false",
   "url": "https://isrtooling.de/",
   "screen_width": 1920,
   "screen_height": 1080,

@@ -17,6 +17,7 @@ const { windowManager } = require ('node-window-manager');
 const { start } = require('repl');
 
 // definiere Globale Variablen
+const erlaube_dev_tools = myconfig.dev_tools_erlaubt;
 let lauf = 0; // Laufzeit für die Gültigkeit des Access Tokens - wenn kurz for Ablauf bitte an der API erneuern lassen
 const access_token_time = 100 // per aktueller Definition ist die Gültigkeit des Accesstokens 15 Minuten oder 900 sec. danach muss er mit dem Refresh Token erneuert werden
 let auth_token ="";// Zwischenspeicher für den accesstoken - flüchtig mit Programm ende
@@ -40,13 +41,13 @@ let prog_path = '';// init variable zum game pfad
 let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
 let my_server_ip = '';//init variable zur IP Speicherung
 let game_running = false;// merker zum Spiel im Speicher
-let allow_dev_tools = myconfig.dev_tools_allowed;
 let mywindow ;
 let childwindow;
 let myaktwind;
 let tail;
 let ws;
 let uuid;
+let my_devTools;
 
 
 
@@ -120,11 +121,7 @@ async function createMainWindow(){
         webPreferences:{//Verhalten in die Welt ( aus diversen Gründen wird die App mit vollem Computerzugriff vom Renderer Prozess abgekapselt)
             preload: path.join(__dirname,'preload.js'),// keinen Direkten Aussenweltkontakt - dieser erfolgt über eine Kontextbrücke ( Sicherheitsrelevant)
             contextIsolation: true,//auch der Kontext an sich ist nicht für die Aussenwelt verfügbar
-            if dev_tools_allowed ==="true"{
-                devTools:true;
-            } else{
-                devTools:false;
-            }
+            devTools : my_devTools,
         }
     });
     if (success_token){// wurde der Loginprozess erfolgreich abgeschlossen ?
@@ -551,6 +548,11 @@ function starte_ws(){
 
 // hier startet das eigentliche Programm
 init_log();
+if (erlaube_dev_tools === "true"){
+    my_devTools:true;
+} else{
+    my_devTools:false;
+}
 const timer_id = setInterval(() => {//rufe den Timer auf
     check_game_is_running();
     refresh_auth_token();

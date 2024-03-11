@@ -6,27 +6,25 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": ""
+    "build": "electron-builder"
   },
-
-  "build":{
-    "appId":"ISRTooling",
-    "win":{
-      "target":[
+  "build": {
+    "appId": "ISRTooling",
+    "win": {
+      "target": [
         "nsis"
       ],
-      "icon":"icon.ico"
+      "icon": "icon.ico"
     },
-    "nsis":{
-      "oneClick":false,
+    "nsis": {
+      "oneClick": false,
       "installerIcon": "icon.ico",
-      "uninstallerIcon":"icon.ico",
-      "uninstallDisplayName":"ISRTooling-Uninstaller",
-      "license":"license.md",
-      "allowToChangeInstallationDirectory":true
+      "uninstallerIcon": "icon.ico",
+      "uninstallDisplayName": "ISRTooling-Uninstaller",
+      "license": "license.md",
+      "allowToChangeInstallationDirectory": true
     }
   },
-
   "author": "RudiRuder",
   "license": "MIT",
   "dependencies": {
@@ -35,7 +33,6 @@
     "clipboard-event": "^1.6.0",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.4.1",
-    "electron": "^28.2.4",
     "electron-log": "^5.1.1",
     "node-window-manager": "^2.2.4",
     "sharp": "^0.33.2",
@@ -44,6 +41,7 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "electron": "^28.2.4",
     "electron-builder": "^24.13.3"
   }
 }
