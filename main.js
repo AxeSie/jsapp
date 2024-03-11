@@ -15,6 +15,8 @@ const WebSocket = require ('ws');//websocket client
 const exec = require('child_process').exec;//run taskmanager for getting the Game runs 
 const { windowManager } = require ('node-window-manager');
 const { start } = require('repl');
+const { autoUpdater } = require ('electron-updater');
+
 
 // definiere Globale Variablen
 const erlaube_dev_tools = myconfig.dev_tools_erlaubt;
@@ -36,7 +38,7 @@ const my_uploadpic_url = myconfig.url+"api/files/images/";//url zum Image upload
 const my_ws_url = "ws://127.0.0.1:8000/ws/jette/";
 const my_get_ws_uuid = myconfig.url+'jette';
 const mybounds = {x:myconfig.x,y:myconfig.y};
-let log_path = '';//init variable zum log pfad
+let log_path ='';//init variable zum log pfad
 let prog_path = '';// init variable zum game pfad
 let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
 let my_server_ip = '';//init variable zur IP Speicherung
@@ -123,6 +125,9 @@ async function createMainWindow(){
             contextIsolation: true,//auch der Kontext an sich ist nicht für die Aussenwelt verfügbar
             devTools : my_devTools,
         }
+    });
+    mywindow.once('ready-to-show',() =>{
+        autoUpdater.checkForUpdatesAndNotify();
     });
     if (success_token){// wurde der Loginprozess erfolgreich abgeschlossen ?
         mywindow.loadFile(path.join(__dirname,'./renderer/main.html'));//ja weiter mit der App
@@ -373,6 +378,7 @@ function onsuccess(v){
 // oder gab es in der Kette einen Fehler
 function onerror(err){
     log.error(`Ich habe Error: ${err}`);
+    throw new Error(`Fehler in Programmablauf ${err}`)
     process.exit();
 };
 
@@ -557,8 +563,8 @@ const timer_id = setInterval(() => {//rufe den Timer auf
     check_game_is_running();
     refresh_auth_token();
 },8000);// alle 8 sekunden
-if (process.platform !== 'darwin') {// bin ich auf windows ?
-    log_path = process.env.HOME+'\\AppData';// dann ist der Launcher Ordner in 
+if (process.platform === 'win32') {// bin ich auf windows ?
+    log_path = process.env.USERPROFILE+'\\AppData';// dann ist der Launcher Ordner in 
     log.info('Path to AppData :'+log_path);
 };
 check_game_is_running()
@@ -707,6 +713,17 @@ ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier
     };
 });
 
+ipcMain.on("restart_app",() => {
+    autoUpdater.quitAndInstall();
+});
+
+autoUpdater.on('update-available', () => {
+    mywindow.webContents.send('message:new_release','update_available');
+  });
+
+autoUpdater.on('update-downloaded', () => {
+    mywindow.webContents.send('message:release_down','update_downloaded');
+  });
 
 ///child window
 ///childwindow = new BrowserWindow({modal:true, show:false})

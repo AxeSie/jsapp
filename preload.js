@@ -9,10 +9,13 @@ const ipc = {
             'register_new_user',
             'reset_user_pw',
             'check1',
+            'restart_app',
         ],
         // From main to render.
         'receive': [
             'message:update', // Here is your channel name
+            'message:new_release',
+            'message:release_down',
             'window:closed',
         ],
         // From render to main and back again.

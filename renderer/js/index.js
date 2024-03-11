@@ -28,6 +28,14 @@ function myfunction3(){
     window.ipcRender.send("reset_user_pw",JSON.stringify(mypayload));
 };
 
+function myfunction4(){
+    note.classList.add('hidden');
+}
+
+function myfunction5(){
+    window.ipcRender.send("restart_app","restart_app");
+}
+
 const hp1 = document.getElementById("ht");
 const hp2 = document.getElementById("ht1");
 const uname = document.getElementById("user");
@@ -38,6 +46,10 @@ const text = document.getElementById("text-caption");
 const el = document.getElementById("loginbtn");
 const ef = document.getElementById("registerbtn");
 const ei = document.getElementById("resetbtn");
+const note = document.getElementById("mitteilung")
+const nachr = document.getElementById("nachricht")
+const ed = document.getElementById("closemessagebtn")
+const ew = document.getElementById("updatemessagebtn")
 
 if (el) {
     el.addEventListener('click', myfunction);
@@ -49,6 +61,25 @@ if (ei) {
     ei.addEventListener('click', myfunction3);
 }
 
+if (ed) {
+    ed.addEventListener('click', myfunction4);
+}
+
+if (ew) {
+    ew.addEventListener('click', myfunction5);
+}
+
 window.ipcRender.receive('message:update',(message) => {
     text.innerText = message;
+});
+
+window.ipcRender.receive('message:new_release',() => {
+    nachr.innerText = ' Neue App Version verfügbar -> wird heruntergeladen ';
+    note.classList.remove('hidden');
+});
+
+window.ipcRender.receive('message:release_down',() => {
+    nachr.innerText = ' Neue App Version zur Installation nach Neustart bereit! Jetzt neu starten ? ';
+    ew.classList.remove('hidden');
+    note.classList.remove('hidden');
 });
