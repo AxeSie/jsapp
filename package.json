@@ -1,7 +1,7 @@
 {
   "name": "isrtooling",
   "productName": "ISR Tool",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "first blood",
   "main": "main.js",
   "repository":{
