@@ -1,7 +1,7 @@
 {
   "name": "isrtooling",
   "productName": "ISR Tool",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "first blood",
   "main": "main.js",
   "repository":{
@@ -9,14 +9,18 @@
     "url": "https//github.com/AxeSie/jsapp.git"
   },
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --trace-warnings",
     "build": "electron-builder build --win --publish never",
     "deploy":"electron-builder build --win --publish always"
   },
   "build": {
     "appId": "ISRTooling",
     "files": [
-      "**/*"
+      "**/*",
+      "!elecron-builder.yml",
+      "!.gitignore",
+      "!jsdsekapp.code-workspace",
+      "!**/dist/*"
     ],
     "win": {
       "target": [
@@ -30,7 +34,11 @@
       "uninstallerIcon": "icon.ico",
       "uninstallDisplayName": "ISRTooling-Uninstaller",
       "license": "license.md",
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": "de_DE",
+      "installerSidebar":"main-logo.bmp",
+      "menuCategory": "DasKartell",
+      "shortcutName":"ISR Tooling"
     }
   },
   "author": "RudiRuder",

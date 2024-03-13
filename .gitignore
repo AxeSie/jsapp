@@ -2,3 +2,4 @@ node_modules/
 renderer/images/sendtobackend/
 dist/
 electron-builder.yml
+build/

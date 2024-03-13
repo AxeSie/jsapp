@@ -16,10 +16,21 @@ const exec = require('child_process').exec;//run taskmanager for getting the Gam
 const { windowManager } = require ('node-window-manager');
 const { start } = require('repl');
 const { autoUpdater } = require ('electron-updater');
-
+const appVersion = require('electron').app.getVersion()
 
 // definiere Globale Variablen
-const erlaube_dev_tools = myconfig.dev_tools_erlaubt;
+if [myconfig.node_env !== "Production"){
+    const erlaube_dev_tools = myconfig.dev_tools_erlaubt;    
+    const base_url = "https:"+myconfig.url_prod;
+    const ws_url = "ws"+myconfig.url_prod;
+    const game_name = myconfig.gamename_prod;
+} else{
+    const erlaube_dev_tools = "true";
+    const base_url = "http:"+myconfig.url_dev;
+    const ws_url = "ws"+myconfig.url_dev;
+    const game_name = myconfig.gamename_dev;
+
+};
 let lauf = 0; // Laufzeit für die Gültigkeit des Access Tokens - wenn kurz for Ablauf bitte an der API erneuern lassen
 const access_token_time = 100 // per aktueller Definition ist die Gültigkeit des Accesstokens 15 Minuten oder 900 sec. danach muss er mit dem Refresh Token erneuert werden
 let auth_token ="";// Zwischenspeicher für den accesstoken - flüchtig mit Programm ende
@@ -27,16 +38,16 @@ let refr_token ="";// gleiche für den refresh token
 let success_token = false;//dient als Merker für den erfolgreichen Loginalgorithmus
 const dev_log_log = './dev/log.log';// url zum Logfile
 const dev_game_log = './dev/Game.log';//url zum Spiele Log
-const game_process = 'chrome.exe';//Name der Spieldatei
+const game_process = game_name;//Name der Spieldatei
 const log_log = '\\RSILauncher\\log.log'; // suche hier nach der log datei
 const game_log = '\\Game.log'; // Dateiname für Gamelog Datei
-const my_access_url = myconfig.url+"api/token/refresh/";//url zur aktualisierung vom accesstoken
-const my_refresh_url = myconfig.url+"api/token/";// url zum einloggen
-const my_register_url = myconfig.url+"api/register/";//url zum registern
-const my_reset_url = myconfig.url+"api/reset/";// URL zum Password reset
-const my_uploadpic_url = myconfig.url+"api/files/images/";//url zum Image upload
-const my_ws_url = "ws://127.0.0.1:8000/ws/jette/";
-const my_get_ws_uuid = myconfig.url+'jette';
+const my_access_url = base_url+"api/token/refresh/";//url zur aktualisierung vom accesstoken
+const my_refresh_url = base_url+"api/token/";// url zum einloggen
+const my_register_url = base_url+"api/register/";//url zum registern
+const my_reset_url = base_url+"api/reset/";// URL zum Password reset
+const my_uploadpic_url = base_url+"api/files/images/";//url zum Image upload
+const my_ws_url = ws_url+"/ws/jette/";
+const my_get_ws_uuid = base_url+'jette';
 const mybounds = {x:myconfig.x,y:myconfig.y};
 let log_path ='';//init variable zum log pfad
 let prog_path = '';// init variable zum game pfad
@@ -567,6 +578,7 @@ if (process.platform === 'win32') {// bin ich auf windows ?
     log_path = process.env.USERPROFILE+'\\AppData';// dann ist der Launcher Ordner in 
     log.info('Path to AppData :'+log_path);
 };
+log.info(`Aktuelle App Version : ${appVersion}`);
 check_game_is_running()
     .then(getthelogs)// arbeite folgende Funktionen der Reihe nach ab
     .then(searchthepath)
@@ -671,11 +683,18 @@ ipcMain.on("register_new_user", (event,args) =>{//KontextBridge zum Renderer Pro
         mywindow.loadFile(link);// rufe neuen Fensterinhalt auf
         })
         .catch(function(error){// im Fehlerfall error
-            mywindow.webContents.send('message:update',`Error Status: ${error.response.status} Detail : ${JSON.stringify(error.response.data)} `);
+            log.error(`error response register: ${error}`);
             if (error.code === 'ECONNABORTED'){
                 log.error('Request an Backend Post Register timed out');
-            } else {
+                mywindow.webContents.send('message:update',`Error : Verbindung Zeitüberlauf`);
+            }
+            if (error.code === 'ECONNREFUSED'){
+                log.error('Request an Backend Post Register refused');
+                mywindow.webContents.send('message:update',`Error: Verbindung zurückgewiesen`);
+            }
+            if (error.response){
                 log.error(`got Error response register Data: ${JSON.stringify(error.response.data) }   status: ${error.response.status }    Message: ${error.message }`);
+                mywindow.webContents.send('message:update',`Error Status: ${error.response.status} Detail : ${JSON.stringify(error.response.data)} `);
             }
         });
 });
