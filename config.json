@@ -5,7 +5,7 @@
   "level_prod": "error",
   "dev_tools_erlaubt": "false",
   "url_dev": "//127.0.0.1:8000/",
-  "url_prod":"//isrtooling.de/",
+  "url_prod": "//isrtooling.de/",
   "screen_width": 1920,
   "screen_height": 1080,
   "left": 1350,
@@ -16,5 +16,7 @@
   "x": 1000,
   "y": 50,
   "gamename_dev": "chrome.exe",
-  "gamename_prod":"starcitizen.exe"
+  "gamename_prod": "starcitizen.exe",
+  "handle": "RudRud",
+  "token": "U2FsdGVkX18pIKTNNu8V4V1CXdu3/f+DDjSw/qSRCx9xaVPAwJ1X9EiObc9ve1HYiVUYPHm21b0wOLRxZRDyIu8d8Bqf186k96x+gjmeb3/DIrr/imjTL0L9Irpmn8hYQ43NKYQxkc0TF18Y5yvoKGYoMWPQq2lGcVCjI9aXppACeY1AIulHW02JwAoTiAt39QRldry5nD03EliaGmOoUI2S7rTirvWCLcMKWK3JT+G3iSHL8aK1gsJcD3uCqwQvUEIbOY2H4F9nTIdC1rkdZNNTd6/vUKkqBJ4yEhA/rdF5p8cFJyHR9RVXwMPhIWATiomfr8lcN5H7hvVRGMXMig=="
 }

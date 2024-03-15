@@ -18,19 +18,19 @@ const { start } = require('repl');
 const { autoUpdater } = require ('electron-updater');
 const appVersion = require('electron').app.getVersion()
 
-// definiere Globale Variablen
-if [myconfig.node_env !== "Production"){
-    const erlaube_dev_tools = myconfig.dev_tools_erlaubt;    
-    const base_url = "https:"+myconfig.url_prod;
-    const ws_url = "ws"+myconfig.url_prod;
-    const game_name = myconfig.gamename_prod;
-} else{
-    const erlaube_dev_tools = "true";
-    const base_url = "http:"+myconfig.url_dev;
-    const ws_url = "ws"+myconfig.url_dev;
-    const game_name = myconfig.gamename_dev;
 
-};
+let erlaube_dev_tools;
+let base_url;
+let ws_url;
+let game_process;
+let my_access_url;
+let my_refresh_url;
+let my_register_url;
+let my_reset_url;
+let my_uploadpic_url;
+let my_ws_url;
+let my_get_ws_uuid;
+let mybounds;
 let lauf = 0; // Laufzeit für die Gültigkeit des Access Tokens - wenn kurz for Ablauf bitte an der API erneuern lassen
 const access_token_time = 100 // per aktueller Definition ist die Gültigkeit des Accesstokens 15 Minuten oder 900 sec. danach muss er mit dem Refresh Token erneuert werden
 let auth_token ="";// Zwischenspeicher für den accesstoken - flüchtig mit Programm ende
@@ -38,17 +38,8 @@ let refr_token ="";// gleiche für den refresh token
 let success_token = false;//dient als Merker für den erfolgreichen Loginalgorithmus
 const dev_log_log = './dev/log.log';// url zum Logfile
 const dev_game_log = './dev/Game.log';//url zum Spiele Log
-const game_process = game_name;//Name der Spieldatei
 const log_log = '\\RSILauncher\\log.log'; // suche hier nach der log datei
 const game_log = '\\Game.log'; // Dateiname für Gamelog Datei
-const my_access_url = base_url+"api/token/refresh/";//url zur aktualisierung vom accesstoken
-const my_refresh_url = base_url+"api/token/";// url zum einloggen
-const my_register_url = base_url+"api/register/";//url zum registern
-const my_reset_url = base_url+"api/reset/";// URL zum Password reset
-const my_uploadpic_url = base_url+"api/files/images/";//url zum Image upload
-const my_ws_url = ws_url+"/ws/jette/";
-const my_get_ws_uuid = base_url+'jette';
-const mybounds = {x:myconfig.x,y:myconfig.y};
 let log_path ='';//init variable zum log pfad
 let prog_path = '';// init variable zum game pfad
 let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
@@ -75,8 +66,55 @@ let my_devTools;
 // der verschlüsselte Refresh Token in der config Datei ist u.a. mit dem Userhandle als Key bearbeitet
 
 
-
 // Funktionsdefinitionen
+
+function startwerte() {
+    return new Promise(function(resolve, reject){ //asynchroner aufruf
+        log.initialize();
+        log.info(`Aktuelle App Version : ${appVersion}`);
+        if (myconfig.node_env === "Production"){
+            erlaube_dev_tools = myconfig.dev_tools_erlaubt;    
+            base_url = "https:"+myconfig.url_prod;
+            ws_url = "ws"+myconfig.url_prod;
+            game_process = myconfig.gamename_prod;
+            log.transports.console.level = false;
+            log.transports.file.level = myconfig.level_prod;
+        } else{
+            erlaube_dev_tools = "true";
+            base_url = "http:"+myconfig.url_dev;
+            ws_url = "ws:"+myconfig.url_dev;
+            game_process = myconfig.gamename_dev;
+            log.transports.console.level = myconfig.level;//Level aus Config für Konsole
+            log.transports.file.level = myconfig.level;//Level für File aus Config        
+        };
+        if (myconfig.logging !== 'true'){// Ich möchte login komplett abstellen somit alles flase
+            log.transports.file.level = false;
+            log.transports.console.level = false;
+        };
+        my_access_url = base_url+"api/token/refresh/";//url zur aktualisierung vom accesstoken
+        my_refresh_url = base_url+"api/token/";// url zum einloggen
+        my_register_url = base_url+"api/register/";//url zum registern
+        my_reset_url = base_url+"api/reset/";// URL zum Password reset
+        my_uploadpic_url = base_url+"api/files/images/";//url zum Image upload
+        my_ws_url = ws_url+"ws/jette/";
+        my_get_ws_uuid = base_url+'jette';
+        mybounds = {x:myconfig.x,y:myconfig.y};
+        if (erlaube_dev_tools === "true"){
+            my_devTools:true;
+        } else{
+            my_devTools:false;
+        };
+        if (process.platform === 'win32') {// bin ich auf windows ?
+            log_path = process.env.USERPROFILE+'\\AppData';// dann ist der Launcher Ordner in 
+            log.info('Path to AppData :'+log_path);
+        };
+        const timer_id = setInterval(() => {//rufe den Timer auf
+            check_game_is_running();
+            refresh_auth_token();
+        },8000);// alle 8 sekunden
+        resolve(true);
+    })
+};
 
 //Funktion zum Überprüfen, ob das Game läuft
 function isRunning(proc){
@@ -498,16 +536,13 @@ function check_game_is_running(){
 
 //handle zum aktuellen Fenster
 function get_actual_window(){
-    return new Promise(function(resolve,reject){
-        myaktwind = windowManager.getActiveWindow();
-        if (myaktwind.getTitle() === myconfig.win_name){
-            myaktwind.setBounds(mybounds);
-            log.info(`did set Window Bounds : ${myaktwind.getTitle()}`);
-        } else {
-            log.info(`Got wrong Window ${myaktwind.getTitle()}`);
-        };
-        resolve(true);
-    })
+    myaktwind = windowManager.getActiveWindow();
+    if (myaktwind.getTitle() === myconfig.win_name){
+        myaktwind.setBounds(mybounds);
+        log.info(`did set Window Bounds : ${myaktwind.getTitle()}`);
+    } else {
+        log.info(`Got wrong Window ${myaktwind.getTitle()}`);
+    };
 };
 
 
@@ -540,6 +575,7 @@ function starte_ws(){
             log.info(`got answerfrom get uuid: ${response.data['uuid']} `);
             uuid = response.data['uuid'];
             log.info(`made out of it: ${uuid} `);
+            log.info(`my ws url: ${my_ws_url}`)
             ws = new WebSocket(my_ws_url+'start/?uuid='+uuid,{
                 perMessageDeflate:false,
             });
@@ -562,24 +598,10 @@ function starte_ws(){
 
 
 
-
 // hier startet das eigentliche Programm
-init_log();
-if (erlaube_dev_tools === "true"){
-    my_devTools:true;
-} else{
-    my_devTools:false;
-}
-const timer_id = setInterval(() => {//rufe den Timer auf
-    check_game_is_running();
-    refresh_auth_token();
-},8000);// alle 8 sekunden
-if (process.platform === 'win32') {// bin ich auf windows ?
-    log_path = process.env.USERPROFILE+'\\AppData';// dann ist der Launcher Ordner in 
-    log.info('Path to AppData :'+log_path);
-};
-log.info(`Aktuelle App Version : ${appVersion}`);
-check_game_is_running()
+
+startwerte()
+    .then(check_game_is_running)
     .then(getthelogs)// arbeite folgende Funktionen der Reihe nach ab
     .then(searchthepath)
     .then(getthegame)
