@@ -1,5 +1,5 @@
 {
-  "node_env": "development",
+  "node_env": "Production",
   "logging": "true",
   "level_dev": "debug",
   "level_prod": "error",
@@ -19,8 +19,5 @@
   "h": 600,
   "op": 0,
   "gamename_dev": "chrome.exe",
-  "gamename_prod": "starcitizen.exe",
-  "handle": "RudRud",
-  "m_id": 65537,
-  "token": "U2FsdGVkX1/9XsjWH97Kt5dtLpye0jkH1AGDm3OrpICAJNHgzCWDgYdVMp0hY+1KQizXxMHr6fUrUII7wCvztI/8BpeIC7jQ29dmCjhQVmNdX3V8whvhADr/mYQtSQ2/Q32CvF4MV1KKprs37v+gJ7Ql78+KLq9g9ceFkRV+KgbgwYvmEPtGuBJrJ0ORjDGfEEu53+hocH30zPgl6ZWVR3Pr1T4B9BErsLYbz1aqE/6RNYa4xRZjQs1xx+vFOHzkxqeNK87crtWbWn2TPVnBmtVPDjCufvJXcrbQ5gkwmd1FE0HXthex57AcDZqyl2vfAsv3YbkCBh/0XB7bw0/rEQ=="
+  "gamename_prod": "starcitizen.exe"
 }
