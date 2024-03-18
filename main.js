@@ -98,7 +98,7 @@ function startwerte() {
         my_uploadpic_url = base_url+"api/files/images/";//url zum Image upload
         my_ws_url = ws_url+"ws/jette/";
         my_get_ws_uuid = base_url+'jette';
-        mybounds = {x:myconfig.x,y:myconfig.y};
+        mybounds = {x:myconfig.x,y:myconfig.y,width:myconfig.w,height:myconfig.h};
         if (erlaube_dev_tools === "true"){
             my_devTools:true;
         } else{
@@ -177,6 +177,20 @@ async function createMainWindow(){
     });
     mywindow.once('ready-to-show',() =>{
         autoUpdater.checkForUpdatesAndNotify();
+    });
+    mywindow.on('close', () => {
+        myaktwind = windowManager.getActiveWindow();
+        mynew_bounds = myaktwind.getBounds();
+        mynew_monitor = myaktwind.getMonitor();
+        mynew_opacity = myaktwind.getOpacity();
+        myconfig.x = mynew_bounds.x
+        myconfig.y = mynew_bounds.y
+        myconfig.w = mynew_bounds.width
+        myconfig.h = mynew_bounds.height
+        myconfig.m_id = mynew_monitor.id
+        myconfig.op = mynew_opacity
+        fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Date
+        log.info(`Window Bounds to save-> Monitor: ${mynew_monitor.id} Bounds: ${mynew_bounds.x} Opacity: ${mynew_opacity}`);
     });
     if (success_token){// wurde der Loginprozess erfolgreich abgeschlossen ?
         mywindow.loadFile(path.join(__dirname,'./renderer/main.html'));//ja weiter mit der App
@@ -339,7 +353,7 @@ function clipboardchanged(qudata){
                 Z:parseFloat(ncs[7].replace(',','.')/1000)
             };
             log.info(`New Player Coodrdinates X: ${npc.X} , Y: ${npc.Y}, Z: ${npc.Z}`);//logge die Datein
-            // hier Fehlt noch die Übergabe an die Backend API
+            ws.send(JSON.stringify({"type":"Clip_Message", "message": npc}))
         } catch (e) {//im Fehlerfall
             log.error(`Clipboard Event Error can not parse data : ${qudata} with error: ${e}`)//logge einen Fehler
         }
@@ -386,6 +400,7 @@ function logfilechanged(data){
             "Action":code
         };
         log.info(`Datum : ${datum} Game Handle: ${player} Action: ${code}`);
+        ws.send(`message:{npa} `);
     }
         // fehlt senden an API
     if (data.toLowerCase().indexOf("user login success - handle[") >= 0){//suche nach dem String
@@ -590,7 +605,6 @@ function starte_ws(){
             });
             ws.on('message',function message (data){
                 log.info(`Got message over Websockets : ${data}`);
-            return response(true);
         })
     })
 };
@@ -765,6 +779,9 @@ autoUpdater.on('update-available', () => {
 autoUpdater.on('update-downloaded', () => {
     mywindow.webContents.send('message:release_down','update_downloaded');
   });
+
+
+
 
 ///child window
 ///childwindow = new BrowserWindow({modal:true, show:false})

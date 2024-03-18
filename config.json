@@ -13,10 +13,14 @@
   "width": 500,
   "height": 900,
   "win_name": "ISR Tool",
-  "x": 1000,
-  "y": 50,
+  "x": 1069,
+  "y": 66,
+  "w": 527,
+  "h": 600,
+  "op": 0,
   "gamename_dev": "chrome.exe",
   "gamename_prod": "starcitizen.exe",
   "handle": "RudRud",
-  "token": "U2FsdGVkX18pIKTNNu8V4V1CXdu3/f+DDjSw/qSRCx9xaVPAwJ1X9EiObc9ve1HYiVUYPHm21b0wOLRxZRDyIu8d8Bqf186k96x+gjmeb3/DIrr/imjTL0L9Irpmn8hYQ43NKYQxkc0TF18Y5yvoKGYoMWPQq2lGcVCjI9aXppACeY1AIulHW02JwAoTiAt39QRldry5nD03EliaGmOoUI2S7rTirvWCLcMKWK3JT+G3iSHL8aK1gsJcD3uCqwQvUEIbOY2H4F9nTIdC1rkdZNNTd6/vUKkqBJ4yEhA/rdF5p8cFJyHR9RVXwMPhIWATiomfr8lcN5H7hvVRGMXMig=="
+  "m_id": 65537,
+  "token": "U2FsdGVkX1/9XsjWH97Kt5dtLpye0jkH1AGDm3OrpICAJNHgzCWDgYdVMp0hY+1KQizXxMHr6fUrUII7wCvztI/8BpeIC7jQ29dmCjhQVmNdX3V8whvhADr/mYQtSQ2/Q32CvF4MV1KKprs37v+gJ7Ql78+KLq9g9ceFkRV+KgbgwYvmEPtGuBJrJ0ORjDGfEEu53+hocH30zPgl6ZWVR3Pr1T4B9BErsLYbz1aqE/6RNYa4xRZjQs1xx+vFOHzkxqeNK87crtWbWn2TPVnBmtVPDjCufvJXcrbQ5gkwmd1FE0HXthex57AcDZqyl2vfAsv3YbkCBh/0XB7bw0/rEQ=="
 }
