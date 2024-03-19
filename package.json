@@ -1,29 +1,22 @@
 {
   "name": "isrtooling",
   "productName": "ISR Tool",
-  "version": "0.1.0",
+  "version": "0.1.1-alpha",
   "description": "first blood",
   "main": "main.js",
-  "repository":{
-    "type": "git",
-    "url": "https//github.com/AxeSie/jsapp.git"
-  },
   "scripts": {
     "start": "electron . --trace-warnings",
-    "build": "electron-builder build --win --publish never",
-    "deploy":"electron-builder build --win --publish always"
+    "build": "electron-builder build --win --publish=never",
+    "release":"electron-builder build --win --publish=always",
+    "postinstall":"electron-builder install-app-dps"
   },
   "build": {
-    "appId": "ISRTooling",
+    "appId": "jsapp",
     "files": [
       "**/*",
       "!.gitignore",
       "!.jsdsekapp.code-workspace",
-      "!.electron-builder.yml",
-      "!./dev/*",
-      "!./build/*",
-      "!./node_modules/*"
-
+      "!**/dev/*"
     ],
     "win": {
       "target": [
@@ -43,6 +36,12 @@
       "menuCategory": "DasKartell",
       "shortcutName":"ISR Tooling"
     }
+  },
+  "publish": {
+    "provider":"github",
+    "repo":"jsapp",
+    "owner":"AxeSie",
+    "releaseType":"release"
   },
   "author": "RudiRuder",
   "license": "MIT",

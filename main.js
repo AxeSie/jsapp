@@ -3,7 +3,6 @@ const log = require('electron-log/main'); //log file modul - logged auf Console 
 const path = require('path'); // pfad modul
 const fs = require('node:fs');// filesystem modul
 const axios = require('axios');//http modul
-require('dotenv').config();// modul zur Ermittlung der env Variablen liest die datei .env im Hauptverzeichnis und fügt diese Variablen ein
 const clipboardListener = require ('clipboard-event');//modul zum Überwachen der Zwischenablage
 Tail = require('tail').Tail;//Modul zur Überwachung der log Dateien
 const { app, BrowserWindow, clipboard, ipcMain } = require('electron');// referenz auf die Electron Module app ( die Anwendungsschicht), BrowserWindow (als Chromium Referenz), ipcMain (als Komminikation zum Renderer Prozess)
@@ -54,6 +53,11 @@ let my_devTools;
 let my_game_handle;
 let myconfig;
 let config_path;
+let ret="ss&ew(){!+334rer";
+let ret1="!eeRqLLp)()qXXd2";
+let ret2="ichhabehunger!0w";
+let node_config="\\AppData\\local\\Programs\\ISR Tool\\config\\";
+    
 
 
 
@@ -105,7 +109,7 @@ function startwerte() {
         }
         deletelog(process.env.USERPROFILE+"\\AppData\\Roaming\\ISR Tool\\logs\\main.log")
         .then(log.initialize);
-        config_path = process.env.USERPROFILE+process.env.node_config;
+        config_path = process.env.USERPROFILE+node_config;
         log.info(config_path);
         fsPromises.access(config_path,fs.constants.W_OK)
         .then(()=>{
@@ -547,7 +551,7 @@ function refresh_auth_token(){
 
 //funktion zum speichern eines neuen refresh token
 function store_new_token(tokens){
-    get_token(process.env.ret,process.env.ret1,tokens.data.refresh,1);
+    get_token(ret,ret1,tokens.data.refresh,1);
     auth_token = tokens.data.access;
     refr_token = tokens.data.refresh;
 };
@@ -557,7 +561,7 @@ function config_token(data) {
     return new Promise(function(resolve){
         if (typeof myconfig.token !== 'undefined'){
             if(myconfig.token !== ""){// habe ich einen refresh token gespeichert?
-                refr_token = get_token(process.env.ret,process.env.ret1,"",0);// dann lies Ihn aus
+                refr_token = get_token(ret,ret1,"",0);// dann lies Ihn aus
                 resolve(get_new_access(refr_token));//hole dir einen neuen access Token von der API
             }else {
                 log.info('leerer Token gespeichert');
