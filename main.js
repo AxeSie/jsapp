@@ -4,7 +4,6 @@ const path = require('path'); // pfad modul
 const fs = require('node:fs');// filesystem modul
 const axios = require('axios');//http modul
 require('dotenv').config();// modul zur Ermittlung der env Variablen liest die datei .env im Hauptverzeichnis und fügt diese Variablen ein
-let myconfig = require('./config.json');//lese die app configuration
 const clipboardListener = require ('clipboard-event');//modul zum Überwachen der Zwischenablage
 Tail = require('tail').Tail;//Modul zur Überwachung der log Dateien
 const { app, BrowserWindow, clipboard, ipcMain } = require('electron');// referenz auf die Electron Module app ( die Anwendungsschicht), BrowserWindow (als Chromium Referenz), ipcMain (als Komminikation zum Renderer Prozess)
@@ -16,8 +15,9 @@ const exec = require('child_process').exec;//run taskmanager for getting the Gam
 const { windowManager } = require ('node-window-manager');
 const { start } = require('repl');
 const { autoUpdater } = require ('electron-updater');
-const appVersion = require('electron').app.getVersion()
-
+const appVersion = require('electron').app.getVersion();
+const fsPromises = fs.promises;
+const { unlink } = require ('fs/promises');
 
 let erlaube_dev_tools;
 let base_url;
@@ -42,7 +42,6 @@ const log_log = '\\RSILauncher\\log.log'; // suche hier nach der log datei
 const game_log = '\\Game.log'; // Dateiname für Gamelog Datei
 let log_path ='';//init variable zum log pfad
 let prog_path = '';// init variable zum game pfad
-let my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
 let my_server_ip = '';//init variable zur IP Speicherung
 let game_running = false;// merker zum Spiel im Speicher
 let mywindow ;
@@ -52,6 +51,9 @@ let tail;
 let ws;
 let uuid;
 let my_devTools;
+let my_game_handle;
+let myconfig;
+let config_path;
 
 
 
@@ -65,19 +67,77 @@ let my_devTools;
 // Starte einen Refresh timer von 800 sec zur Erneuerung des accessTokens
 // der verschlüsselte Refresh Token in der config Datei ist u.a. mit dem Userhandle als Key bearbeitet
 
-
 // Funktionsdefinitionen
+
+async function deletelog(ff){
+    try{
+        await unlink(ff);
+        console.log(`Deleted : ${ff}`);
+    } catch (error) {
+        console.error (`Got an error tying to delete file: ${error.message}`);
+    }
+};
 
 function startwerte() {
     return new Promise(function(resolve, reject){ //asynchroner aufruf
-        log.initialize();
+        myconfig={
+            logging:"true",
+            node_env:"production",
+            level_prod:"debug",
+            level_dev:"debug",
+            dev_tools_erlaubt:"true",
+            url_dev:"//127.0.0.1:8000/",
+            url_prod:"//isrtooling.de/",
+            screen_width:1920,
+            screen_height:1080,
+            left:1350,
+            top:100,
+            width:500,
+            height:900,
+            win_name:"ISR Tool",
+            x:1069,
+            y:66,
+            w:527,
+            h:600,
+            op:0,
+            gamename_dev:"chrome.exe",
+            gamename_prod:"starcitizen.exe"
+        }
+        deletelog(process.env.USERPROFILE+"\\AppData\\Roaming\\ISR Tool\\logs\\main.log")
+        .then(log.initialize);
+        config_path = process.env.USERPROFILE+process.env.node_config;
+        log.info(config_path);
+        fsPromises.access(config_path,fs.constants.W_OK)
+        .then(()=>{
+            log.info('Config file directory check OK');
+            fsPromises.access(config_path+'.config.json',fs.constants.W_OK)
+            .then (() =>{
+                log.info('Config file vorhanden check OK - lese Daten');
+                myconfig = JSON.parse(fs.readFileSync(config_path+'.config.json','utf8'));
+            })
+            .catch(() => {
+                log.warn('keine Config Datei vorhanden - erstelle');
+                fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
+            });
+        })
+        .catch(() =>{
+            log.warn('Verzeichnis zum config file nicht vorhanden erstelle')
+            fs.mkdirSync(config_path,{recursive:true},function(err){
+                if (err){
+                    log.error('Kann Verzeichnis für Config Datei nicht erstellen! - Abbruch');
+                    process.exit();
+                } 
+            });
+            log.info('Config Datei Verzeichnis erstellt- erstelle nun die Datei');
+            fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei  
+        });
         log.info(`Aktuelle App Version : ${appVersion}`);
-        if (myconfig.node_env === "Production"){
+        if (myconfig.node_env === "production"){
             erlaube_dev_tools = myconfig.dev_tools_erlaubt;    
             base_url = "https:"+myconfig.url_prod;
             ws_url = "ws"+myconfig.url_prod;
             game_process = myconfig.gamename_prod;
-            log.transports.console.level = false;
+            log.transports.console.level = true;
             log.transports.file.level = myconfig.level_prod;
         } else{
             erlaube_dev_tools = "true";
@@ -99,6 +159,7 @@ function startwerte() {
         my_ws_url = ws_url+"ws/jette/";
         my_get_ws_uuid = base_url+'jette';
         mybounds = {x:myconfig.x,y:myconfig.y,width:myconfig.w,height:myconfig.h};
+        my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
         if (erlaube_dev_tools === "true"){
             my_devTools:true;
         } else{
@@ -138,7 +199,7 @@ function get_token(r1,r2,mytoken,r0){ //r1,r2 sind die Schlüssel, mytoken der a
     };
     if (r0 === 1){// Heir startet die Funktion Abfrage 1 = Verschlüsseln sonst weiter bei entschlüsseln
         myconfig.token = myencrypt (mytoken);//Funktionsaufruf 
-        fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
+        fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
     } else {// sonst entschlüsseln
         return mydecrypt (myconfig.token);//Rückgabe direkt aus config
     };
@@ -189,7 +250,7 @@ async function createMainWindow(){
         myconfig.h = mynew_bounds.height
         myconfig.m_id = mynew_monitor.id
         myconfig.op = mynew_opacity
-        fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Date
+        fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Date
         log.info(`Window Bounds to save-> Monitor: ${mynew_monitor.id} Bounds: ${mynew_bounds.x} Opacity: ${mynew_opacity}`);
     });
     if (success_token){// wurde der Loginprozess erfolgreich abgeschlossen ?
@@ -325,7 +386,7 @@ function searchgamehandle(bvdata){
                         my_game_handle = xxx;
                         myconfig.handle=xxx;
                         log.info('Game Handle war noch nicht gespeichert - Hole nach!');
-                        fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
+                        fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
                     }
                     resolve(gesplittet);//weitergabe der Daten aus game.log für IP finden
                 }
@@ -418,7 +479,7 @@ function logfilechanged(data){
             my_game_handle = xxx;
             myconfig.handle=xxx;
             log.info('Game Handle war noch nicht gespeichert - Hole nach!');
-            fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
+            fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
         }
     }
     if (data.toLowerCase().indexOf("<channel connection complete>") >= 0){//suche nach dem String
@@ -609,7 +670,50 @@ function starte_ws(){
     })
 };
 
+function onFinally(){
+    get_actual_window();
+    tail = new Tail (prog_path+'\\Game.log');// überwache das Dateiende von Game.log mit einem Event
+    clipboardListener.startListening();// setze den Eventhandler zum Clipboard überwachen
+    clipboardListener.on('change',() => {// bei Event
+        let buffer = clipboard.readImage().toPNG();// lies doch einfach mal ein Bild ein
+        log.info (`Picture Buffer typer : ${buffer.length}`);
+        if (buffer.length > 0){
+            const img = sharp(buffer)
+            let img_path = `./renderer/images/sendtobackend/output${Date.now()}.png`;
+            img.metadata()
+            .then(function (metadata){
+                log.info(`Bild Weite: ${metadata.width} , Höhe: ${metadata.height}`);
+                if ((myconfig.screen_width === metadata.width)&&(myconfig.screen_height === metadata.height)){
+                        log.info("Image Größe bekannt - Schnittmuster bekannt");
+                        sharp(buffer).extract({left:myconfig.left,top:myconfig.top,width:myconfig.width,height:myconfig.height})
+                        .toFile(img_path)
+                        .then(info => { 
+                            log.info(`Datei geschrieben : ${info}`);
+                            sende_img(img_path);
+                        })
+                        .catch(err =>{
+                            log.error(`Fehler beim Datei schreiben : ${err}`)
+                        });
+                } else {
+                    log.error("Image Größe unbekannt bzw Schnittmuster unbekannt  - bitte korrigieren - ");
+                };
+            });
+        } else {
+            const mytext = clipboard.readText('clipboard');// und versuch es mi einem Text
+            log.info(`Text from Clipboard : ${mytext}`)
+            clipboardchanged(mytext);// Auswertung mittels Funktion
+        };
+    });
 
+    tail.on('line', (linelog) => {
+        log.info('log file changed:'+linelog);
+        logfilechanged(linelog); // rufe den eventhanlder auf
+    });
+
+    tail.on('error', (error) => {// bei fehler
+        log.error('log file changed:'+error);
+    }); 
+};
 
 
 // hier startet das eigentliche Programm
@@ -623,52 +727,8 @@ startwerte()
     .then(searchip)
     .then(config_token)
     .then(onsuccess,onerror)
-    .finally(function(){
-        get_actual_window();
-        tail = new Tail (prog_path+'\\Game.log');// überwache das Dateiende von Game.log mit einem Event
-        clipboardListener.startListening();// setze den Eventhandler zum Clipboard überwachen
-        clipboardListener.on('change',() => {// bei Event
-            let buffer = clipboard.readImage().toPNG();// lies doch einfach mal ein Bild ein
-            log.info (`Picture Buffer typer : ${buffer.length}`);
-            if (buffer.length > 0){
-                const img = sharp(buffer)
-                let img_path = `./renderer/images/sendtobackend/output${Date.now()}.png`;
-                img.metadata()
-                .then(function (metadata){
-                    log.info(`Bild Weite: ${metadata.width} , Höhe: ${metadata.height}`);
-                    if ((myconfig.screen_width === metadata.width)&&(myconfig.screen_height === metadata.height)){
-                            log.info("Image Größe bekannt - Schnittmuster bekannt");
-                            sharp(buffer).extract({left:myconfig.left,top:myconfig.top,width:myconfig.width,height:myconfig.height})
-                            .toFile(img_path)
-                            .then(info => { 
-                                log.info(`Datei geschrieben : ${info}`);
-                                sende_img(img_path);
-                            })
-                            .catch(err =>{
-                                log.error(`Fehler beim Datei schreiben : ${err}`)
-                            });
-                    } else {
-                        log.error("Image Größe unbekannt bzw Schnittmuster unbekannt  - bitte korrigieren - ");
-                    };
-                });
-            } else {
-                const mytext = clipboard.readText('clipboard');// und versuch es mi einem Text
-                log.info(`Text from Clipboard : ${mytext}`)
-                clipboardchanged(mytext);// Auswertung mittels Funktion
-            };
-        });
-
-        tail.on('line', (linelog) => {
-            log.info('log file changed:'+linelog);
-            logfilechanged(linelog); // rufe den eventhanlder auf
-        });
-
-        tail.on('error', (error) => {// bei fehler
-            log.error('log file changed:'+error);
-        }); 
-
-    });// alles gut dann weiter sonst Fehelr
-
+    .finally(onFinally);
+       
 
 app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende auch die App
     if (process.platform !== 'darwin') app.quit()
@@ -705,7 +765,7 @@ ipcMain.on("register_new_user", (event,args) =>{//KontextBridge zum Renderer Pro
     log.info(`got clicked data register : ${mm.username}`);
     my_game_handle = mm.last_name;
     myconfig.handle = my_game_handle;
-    fs.writeFileSync('./config.json', JSON.stringify(myconfig,null,2));//speichern in Date
+    fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Date
     axios// post zur backendAPI
         .post(my_register_url,mm,{
             timeout:5000,

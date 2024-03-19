@@ -17,10 +17,13 @@
     "appId": "ISRTooling",
     "files": [
       "**/*",
-      "!elecron-builder.yml",
       "!.gitignore",
-      "!jsdsekapp.code-workspace",
-      "!**/dist/*"
+      "!.jsdsekapp.code-workspace",
+      "!.electron-builder.yml",
+      "!./dev/*",
+      "!./build/*",
+      "!./node_modules/*"
+
     ],
     "win": {
       "target": [
