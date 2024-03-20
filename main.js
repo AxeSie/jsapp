@@ -1,7 +1,8 @@
 //// Modul Importe
 const log = require('electron-log/main'); //log file modul - logged auf Console und %USER%\AppData\Roaming\Name der App\logs
 const path = require('path'); // pfad modul
-const fs = require('node:fs');// filesystem modul
+const fs1 = require('fs').promises;// filesystem modul
+const fs = require('node:fs');
 const axios = require('axios');//http modul
 const clipboardListener = require ('clipboard-event');//modul zum Überwachen der Zwischenablage
 Tail = require('tail').Tail;//Modul zur Überwachung der log Dateien
@@ -15,8 +16,8 @@ const { windowManager } = require ('node-window-manager');
 const { start } = require('repl');
 const { autoUpdater } = require ('electron-updater');
 const appVersion = require('electron').app.getVersion();
-const fsPromises = fs.promises;
-const { unlink } = require ('fs/promises');
+const {access , constants, unlink} = require ('node:fs/promises');
+
 
 let erlaube_dev_tools;
 let base_url;
@@ -83,7 +84,7 @@ async function deletelog(ff){
 };
 
 function startwerte() {
-    return new Promise(function(resolve, reject){ //asynchroner aufruf
+    return new Promise(function(resolve){ //asynchroner aufruf
         myconfig={
             logging:"true",
             node_env:"production",
@@ -105,41 +106,50 @@ function startwerte() {
             h:600,
             op:0,
             gamename_dev:"chrome.exe",
-            gamename_prod:"starcitizen.exe"
+            gamename_prod:"StarCitizen.exe"
         }
-        deletelog(process.env.USERPROFILE+"\\AppData\\Roaming\\ISR Tool\\logs\\main.log")
-        .then(log.initialize);
         config_path = process.env.USERPROFILE+node_config;
         log.info(config_path);
-        fsPromises.access(config_path,fs.constants.W_OK)
-        .then(()=>{
+        if (fs.existsSync(config_path)){
             log.info('Config file directory check OK');
-            fsPromises.access(config_path+'.config.json',fs.constants.W_OK)
-            .then (() =>{
+            try{
+                access(config_path+'.config.json',constants.W_OK)
                 log.info('Config file vorhanden check OK - lese Daten');
                 myconfig = JSON.parse(fs.readFileSync(config_path+'.config.json','utf8'));
-            })
-            .catch(() => {
+                log.info(`nach laden von config : ${myconfig.node_env}`);
+            }catch{
                 log.warn('keine Config Datei vorhanden - erstelle');
-                fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
-            });
-        })
-        .catch(() =>{
+                fs.writeFileSync(config_path+'.config.json', JSON.stringify(lmyconfig,null,2));//speichern in Datei
+            };
+        } else {
             log.warn('Verzeichnis zum config file nicht vorhanden erstelle')
             fs.mkdirSync(config_path,{recursive:true},function(err){
                 if (err){
                     log.error('Kann Verzeichnis für Config Datei nicht erstellen! - Abbruch');
-                    process.exit();
+                    reject(err);
                 } 
             });
             log.info('Config Datei Verzeichnis erstellt- erstelle nun die Datei');
             fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei  
-        });
-        log.info(`Aktuelle App Version : ${appVersion}`);
+        }
+        if (erlaube_dev_tools === "true"){
+            my_devTools:true;
+        } else{
+            my_devTools:false;
+        };
+        if (process.platform === 'win32') {// bin ich auf windows ?
+            log_path = process.env.USERPROFILE+'\\AppData';// dann ist der Launcher Ordner in 
+            log.info('Path to AppData :'+log_path);
+        };
+        const timer_id = setInterval(() => {//rufe den Timer auf
+            check_game_is_running();
+            refresh_auth_token();
+        },8000);// alle 8 sekunden
+        log.info(`Aktuelle App Version : ${appVersion} ProgLevel: ${myconfig.node_env}`);
         if (myconfig.node_env === "production"){
             erlaube_dev_tools = myconfig.dev_tools_erlaubt;    
             base_url = "https:"+myconfig.url_prod;
-            ws_url = "ws"+myconfig.url_prod;
+            ws_url = "ws:"+myconfig.url_prod;
             game_process = myconfig.gamename_prod;
             log.transports.console.level = true;
             log.transports.file.level = myconfig.level_prod;
@@ -164,21 +174,9 @@ function startwerte() {
         my_get_ws_uuid = base_url+'jette';
         mybounds = {x:myconfig.x,y:myconfig.y,width:myconfig.w,height:myconfig.h};
         my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
-        if (erlaube_dev_tools === "true"){
-            my_devTools:true;
-        } else{
-            my_devTools:false;
-        };
-        if (process.platform === 'win32') {// bin ich auf windows ?
-            log_path = process.env.USERPROFILE+'\\AppData';// dann ist der Launcher Ordner in 
-            log.info('Path to AppData :'+log_path);
-        };
-        const timer_id = setInterval(() => {//rufe den Timer auf
-            check_game_is_running();
-            refresh_auth_token();
-        },8000);// alle 8 sekunden
-        resolve(true);
-    })
+        log.info(`meine url ${base_url}`);
+        resolve(log_path);
+    });
 };
 
 //Funktion zum Überprüfen, ob das Game läuft
@@ -209,22 +207,6 @@ function get_token(r1,r2,mytoken,r0){ //r1,r2 sind die Schlüssel, mytoken der a
     };
 };
 
-//initialisiere die logging Funktion
-function init_log(){
-    log.initialize();
-    if (myconfig.node_env === 'production'){//steht Produktion in der Config dann keine ausgabe auf der Konsole 
-        log.transports.console.level = false;
-        log.transports.file.level = myconfig.level_prod;// login Level wie in Config Datei einstellen
-    } else {// ne ich bin noch in der Entwicklung oder Fehlersuche
-        log.transports.console.level = myconfig.level;//Level aus Config für Konsole
-        log.transports.file.level = myconfig.level;//Level für File aus Config
-    };
-    if (myconfig.logging !== 'true'){// Ich möchte login komplett abstellen somit alles flase
-        log.transports.file.level = false;
-        log.transports.console.level = false;
-    };
-};
-
 //Funktion zur Erzeugung einer FensterKlasse
 async function createMainWindow(){
     mywindow = new BrowserWindow({//vererbt von Chomium
@@ -241,6 +223,7 @@ async function createMainWindow(){
         }
     });
     mywindow.once('ready-to-show',() =>{
+        log.info('Look for App updates')
         autoUpdater.checkForUpdatesAndNotify();
     });
     mywindow.on('close', () => {
@@ -507,7 +490,7 @@ function onsuccess(v){
 // oder gab es in der Kette einen Fehler
 function onerror(err){
     log.error(`Ich habe Error: ${err}`);
-    throw new Error(`Fehler in Programmablauf ${err}`)
+    //throw new Error(`Fehler in Programmablauf ${err}`)
     process.exit();
 };
 
@@ -546,6 +529,8 @@ function refresh_auth_token(){
         lauf=0;
         log.info('nun machen wir einen Auth Token refresh...');
         get_new_access(refr_token);// rufe funktion zur erneuerung auf
+        log.info('Check also for App Updates');
+        autoUpdater.checkForUpdates();
     };
 };
 
@@ -635,6 +620,11 @@ function heartbeat(){
     }, 30000 + 1000);
 };
 
+//Message handling from Websocket
+function werte_aus(data){
+
+};
+
 // websocket handling
 function starte_ws(){
     axios// post zur backendAPI
@@ -670,6 +660,7 @@ function starte_ws(){
             });
             ws.on('message',function message (data){
                 log.info(`Got message over Websockets : ${data}`);
+                werte_aus(data);
         })
     })
 };
@@ -719,10 +710,16 @@ function onFinally(){
     }); 
 };
 
-
 // hier startet das eigentliche Programm
+const mypromise = new Promise((resolve,reject) =>{
+    deletelog(process.env.USERPROFILE+"\\AppData\\Roaming\\ISR Tool\\logs\\main.log")
+    .then(log.initialize);
+    log.info('Anfang');
+    resolve();
+});
 
-startwerte()
+mypromise
+    .then (startwerte)
     .then(check_game_is_running)
     .then(getthelogs)// arbeite folgende Funktionen der Reihe nach ab
     .then(searchthepath)
@@ -730,8 +727,12 @@ startwerte()
     .then(searchgamehandle)
     .then(searchip)
     .then(config_token)
+    .finally(onFinally)
     .then(onsuccess,onerror)
-    .finally(onFinally);
+    .catch(() =>{
+        log.error('habe error');
+    });
+
        
 
 app.on('window-all-closed', () => {// Wenn es keine Fenster mehr gibt, beende auch die App
@@ -833,14 +834,17 @@ ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier
 });
 
 ipcMain.on("restart_app",() => {
+    log.info('got quit and install from GUI');
     autoUpdater.quitAndInstall();
 });
 
 autoUpdater.on('update-available', () => {
+    log.info('Message to gui new release');
     mywindow.webContents.send('message:new_release','update_available');
   });
 
 autoUpdater.on('update-downloaded', () => {
+    log.info('New Release is down - please restart');
     mywindow.webContents.send('message:release_down','update_downloaded');
   });
 
