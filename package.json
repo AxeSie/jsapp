@@ -1,14 +1,14 @@
 {
   "name": "isrtooling",
   "productName": "ISR Tool",
-  "version": "0.1.4-alpha",
+  "version": "0.1.6-alpha",
   "description": "first blood",
   "main": "main.js",
   "scripts": {
     "start": "electron . --trace-warnings",
     "build": "electron-builder build --win --publish=never",
-    "release":"electron-builder build --win --publish=always",
-    "postinstall":"electron-builder install-app-dps"
+    "release": "electron-builder build --win --publish=always",
+    "postinstall": "electron-builder install-app-dps"
   },
   "build": {
     "appId": "jsapp",
@@ -32,18 +32,20 @@
       "license": "license.md",
       "allowToChangeInstallationDirectory": true,
       "installerLanguages": "de_DE",
-      "installerSidebar":"main-logo.bmp",
+      "installerSidebar": "main-logo.bmp",
       "menuCategory": "DasKartell",
-      "shortcutName":"ISR Tooling"
+      "shortcutName": "ISR Tooling"
     },
-    "publish": [{
-      "provider":"github",
-      "repo":"jsapp",
-      "owner":"AxeSie",
-      "releaseType":"release",
-      "private":true,
-      "publishAutoUpdate":true
-    }]
+    "publish": [
+      {
+        "provider": "github",
+        "repo": "jsapp",
+        "owner": "AxeSie",
+        "releaseType": "release",
+        "private": true,
+        "publishAutoUpdate": true
+      }
+    ]
   },
   "author": "RudiRuder",
   "license": "MIT",
@@ -54,8 +56,6 @@
     "crypto-js": "^4.2.0",
     "dotenv": "^16.4.1",
     "electron-log": "^5.1.1",
-    "electron-updater": "^6.1.8",
-    "node-window-manager": "^2.2.4",
     "sharp": "^0.33.2",
     "tail": "^2.2.6",
     "utf-8-validate": "^6.0.3",

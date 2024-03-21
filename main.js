@@ -1,20 +1,17 @@
 //// Modul Importe
 const log = require('electron-log/main'); //log file modul - logged auf Console und %USER%\AppData\Roaming\Name der App\logs
 const path = require('path'); // pfad modul
-const fs1 = require('fs').promises;// filesystem modul
 const fs = require('node:fs');
 const axios = require('axios');//http modul
 const clipboardListener = require ('clipboard-event');//modul zum Überwachen der Zwischenablage
 Tail = require('tail').Tail;//Modul zur Überwachung der log Dateien
-const { app, BrowserWindow, clipboard, ipcMain } = require('electron');// referenz auf die Electron Module app ( die Anwendungsschicht), BrowserWindow (als Chromium Referenz), ipcMain (als Komminikation zum Renderer Prozess)
+const { app, BrowserWindow, clipboard, ipcMain, screen } = require('electron');// referenz auf die Electron Module app ( die Anwendungsschicht), BrowserWindow (als Chromium Referenz), ipcMain (als Komminikation zum Renderer Prozess)
 var crypto = require("crypto-js");// zur Verschlüsselten Speicherung des Refresh Token
 const sharp = require('sharp');//schneidet das Bild zu
 const FormData = require('form-data');//um ein Bild per post hochzuladen
 const WebSocket = require ('ws');//websocket client
 const exec = require('child_process').exec;//run taskmanager for getting the Game runs 
-const { windowManager } = require ('node-window-manager');
 const { start } = require('repl');
-const { autoUpdater } = require ('electron-updater');
 const appVersion = require('electron').app.getVersion();
 const {access , constants, unlink} = require ('node:fs/promises');
 
@@ -32,16 +29,12 @@ let my_ws_url;
 let my_get_ws_uuid;
 let mybounds;
 let lauf = 0; // Laufzeit für die Gültigkeit des Access Tokens - wenn kurz for Ablauf bitte an der API erneuern lassen
-const access_token_time = 100 // per aktueller Definition ist die Gültigkeit des Accesstokens 15 Minuten oder 900 sec. danach muss er mit dem Refresh Token erneuert werden
+const access_token_time = 100; // per aktueller Definition ist die Gültigkeit des Accesstokens 15 Minuten oder 900 sec. danach muss er mit dem Refresh Token erneuert werden
+let lauf2 = 0;
+const search_update_time = 4;
 let auth_token ="";// Zwischenspeicher für den accesstoken - flüchtig mit Programm ende
 let refr_token ="";// gleiche für den refresh token
 let success_token = false;//dient als Merker für den erfolgreichen Loginalgorithmus
-const dev_log_log = './dev/log.log';// url zum Logfile
-const dev_game_log = './dev/Game.log';//url zum Spiele Log
-const log_log = '\\RSILauncher\\log.log'; // suche hier nach der log datei
-const game_log = '\\Game.log'; // Dateiname für Gamelog Datei
-let log_path ='';//init variable zum log pfad
-let prog_path = '';// init variable zum game pfad
 let my_server_ip = '';//init variable zur IP Speicherung
 let game_running = false;// merker zum Spiel im Speicher
 let mywindow ;
@@ -54,10 +47,13 @@ let my_devTools;
 let my_game_handle;
 let myconfig;
 let config_path;
+let search_update = false;
+let path_log;
 let ret="ss&ew(){!+334rer";
 let ret1="!eeRqLLp)()qXXd2";
 let ret2="ichhabehunger!0w";
 let node_config="\\AppData\\local\\Programs\\ISR Tool\\config\\";
+let mydisplay;
     
 
 
@@ -77,9 +73,9 @@ let node_config="\\AppData\\local\\Programs\\ISR Tool\\config\\";
 async function deletelog(ff){
     try{
         await unlink(ff);
-        console.log(`Deleted : ${ff}`);
+        log.info(`Deleted : ${ff}`);
     } catch (error) {
-        console.error (`Got an error tying to delete file: ${error.message}`);
+        log.error (`Got an error tying to delete file: ${error.message}`);
     }
 };
 
@@ -87,84 +83,84 @@ function startwerte() {
     return new Promise(function(resolve){ //asynchroner aufruf
         myconfig={
             logging:"true",
-            node_env:"production",
-            level_prod:"debug",
+            node_env:"development",
+            level_prod:"error",
             level_dev:"debug",
-            dev_tools_erlaubt:"true",
+            dev_tools_erlaubt:"false",
             url_dev:"//127.0.0.1:8000/",
             url_prod:"//isrtooling.de/",
+            path_log:"c:\\rsi\\StarCitizen\\LIVE\\Game.log",
             screen_width:1920,
             screen_height:1080,
             left:1350,
             top:100,
             width:500,
             height:900,
-            win_name:"ISR Tool",
-            x:1069,
-            y:66,
-            w:527,
+            displ_name:"",
+            x:100,
+            y:100,
+            w:550,
             h:600,
             op:0,
             gamename_dev:"chrome.exe",
             gamename_prod:"StarCitizen.exe"
         }
         config_path = process.env.USERPROFILE+node_config;
-        log.info(config_path);
+        //log.info(config_path);
         if (fs.existsSync(config_path)){
-            log.info('Config file directory check OK');
+            //log.info('Config file directory check OK');
             try{
-                access(config_path+'.config.json',constants.W_OK)
-                log.info('Config file vorhanden check OK - lese Daten');
+                fs.accessSync(config_path+'.config.json',constants.R_OK)
+                //log.info('Config file vorhanden check OK - lese Daten');
                 myconfig = JSON.parse(fs.readFileSync(config_path+'.config.json','utf8'));
-                log.info(`nach laden von config : ${myconfig.node_env}`);
             }catch{
-                log.warn('keine Config Datei vorhanden - erstelle');
-                fs.writeFileSync(config_path+'.config.json', JSON.stringify(lmyconfig,null,2));//speichern in Datei
+                //log.warn('keine Config Datei vorhanden - erstelle');
+                fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
             };
         } else {
-            log.warn('Verzeichnis zum config file nicht vorhanden erstelle')
+            //log.warn('Verzeichnis zum config file nicht vorhanden erstelle')
             fs.mkdirSync(config_path,{recursive:true},function(err){
                 if (err){
                     log.error('Kann Verzeichnis für Config Datei nicht erstellen! - Abbruch');
                     reject(err);
                 } 
             });
-            log.info('Config Datei Verzeichnis erstellt- erstelle nun die Datei');
+            //log.info('Config Datei Verzeichnis erstellt- erstelle nun die Datei');
             fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei  
         }
-        if (erlaube_dev_tools === "true"){
-            my_devTools:true;
-        } else{
-            my_devTools:false;
-        };
-        if (process.platform === 'win32') {// bin ich auf windows ?
-            log_path = process.env.USERPROFILE+'\\AppData';// dann ist der Launcher Ordner in 
-            log.info('Path to AppData :'+log_path);
-        };
         const timer_id = setInterval(() => {//rufe den Timer auf
             check_game_is_running();
             refresh_auth_token();
-        },8000);// alle 8 sekunden
-        log.info(`Aktuelle App Version : ${appVersion} ProgLevel: ${myconfig.node_env}`);
+        },9000);// alle 9 sekunden
         if (myconfig.node_env === "production"){
             erlaube_dev_tools = myconfig.dev_tools_erlaubt;    
             base_url = "https:"+myconfig.url_prod;
             ws_url = "ws:"+myconfig.url_prod;
             game_process = myconfig.gamename_prod;
-            log.transports.console.level = true;
+            log.transports.console.level = myconfig.level_prod;
             log.transports.file.level = myconfig.level_prod;
+            path_log = myconfig.path_log;
+            //search_update = true;
         } else{
             erlaube_dev_tools = "true";
             base_url = "http:"+myconfig.url_dev;
             ws_url = "ws:"+myconfig.url_dev;
             game_process = myconfig.gamename_dev;
-            log.transports.console.level = myconfig.level;//Level aus Config für Konsole
-            log.transports.file.level = myconfig.level;//Level für File aus Config        
+            log.transports.console.level = myconfig.level_dev;//Level aus Config für Konsole
+            log.transports.file.level = myconfig.level_dev;//Level für File aus Config        
+            path_log = "./dev/Game.log";
+            //search_update = false;
         };
         if (myconfig.logging !== 'true'){// Ich möchte login komplett abstellen somit alles flase
             log.transports.file.level = false;
             log.transports.console.level = false;
         };
+        if (erlaube_dev_tools === "true"){
+            my_devTools:true;
+        } else{
+            my_devTools:false;
+        };
+        log.info(`Aktuelle App Version : ${appVersion} ProgLevel: ${myconfig.node_env}`);
         my_access_url = base_url+"api/token/refresh/";//url zur aktualisierung vom accesstoken
         my_refresh_url = base_url+"api/token/";// url zum einloggen
         my_register_url = base_url+"api/register/";//url zum registern
@@ -175,7 +171,7 @@ function startwerte() {
         mybounds = {x:myconfig.x,y:myconfig.y,width:myconfig.w,height:myconfig.h};
         my_game_handle =myconfig.handle;//lese das Gamehandle AUS DER config datei
         log.info(`meine url ${base_url}`);
-        resolve(log_path);
+        resolve();
     });
 };
 
@@ -209,7 +205,16 @@ function get_token(r1,r2,mytoken,r0){ //r1,r2 sind die Schlüssel, mytoken der a
 
 //Funktion zur Erzeugung einer FensterKlasse
 async function createMainWindow(){
+    if (myconfig.displ_name === ""){
+        lx=mydisplay.bounds.x+myconfig.x;
+        ly=mydisplay.bounds.y+myconfig.y;
+    } else {
+        lx=myconfig.x;
+        ly=myconfig.y;
+    };
     mywindow = new BrowserWindow({//vererbt von Chomium
+        x:lx,
+        y:ly,
         width: 500,//Fenstebreite
         height:600,//Fensterhöhe
         frame: false,//Rahmenlos
@@ -222,23 +227,26 @@ async function createMainWindow(){
             devTools : my_devTools,
         }
     });
-    mywindow.once('ready-to-show',() =>{
-        log.info('Look for App updates')
-        autoUpdater.checkForUpdatesAndNotify();
-    });
+
+    //mywindow.once('ready-to-show',() =>{
+        //if (search_update){
+        //    log.info('Look for App updates')
+        //    autoUpdater.checkForUpdatesAndNotify();
+      //  }
+    //});
+
     mywindow.on('close', () => {
-        myaktwind = windowManager.getActiveWindow();
-        mynew_bounds = myaktwind.getBounds();
-        mynew_monitor = myaktwind.getMonitor();
-        mynew_opacity = myaktwind.getOpacity();
-        myconfig.x = mynew_bounds.x
-        myconfig.y = mynew_bounds.y
-        myconfig.w = mynew_bounds.width
-        myconfig.h = mynew_bounds.height
-        myconfig.m_id = mynew_monitor.id
-        myconfig.op = mynew_opacity
+        bbb = mywindow.getBounds();
+        myconfig.x = bbb.x
+        myconfig.y = bbb.y
+        myconfig.w = bbb.width
+        myconfig.h = bbb.height
+        if (mydisplay){
+            myconfig.displ_name = mydisplay.id;
+        };
+        myconfig.op = mywindow.getOpacity()
         fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Date
-        log.info(`Window Bounds to save-> Monitor: ${mynew_monitor.id} Bounds: ${mynew_bounds.x} Opacity: ${mynew_opacity}`);
+        log.info(`Window Bounds to save-> Monitor: ${myconfig.displ_name} Bounds: ${myconfig.x} Opacity: ${myconfig.op}`);
     });
     if (success_token){// wurde der Loginprozess erfolgreich abgeschlossen ?
         mywindow.loadFile(path.join(__dirname,'./renderer/main.html'));//ja weiter mit der App
@@ -248,73 +256,20 @@ async function createMainWindow(){
     //return mainWindow;
 }
 
-//Funktion zur Ermittlung des Installationsverzeichnisses von Star Citizen 
-function getthelogs() {
-    return new Promise(function(resolve,reject){ // da JS asynchron abläuft müssen wir hier die Abarbeitung abwarten mit einem Promise
-        if (myconfig.node_env !== "production"){// wenn im dev mode nimm die Dateien im dev Verzeichnis
-            route = "./dev/log.log";
-        } else {
-            route = log_path+log_log;// in Produktion suche danach
-        };
-        fs.readFile(route, 'utf8',(err,mzdata) => {//lies die Datei ein und gib den Inhalt zurück
-            if (err){// haben wir einen Fehler?
-                reject(err);//erzeuge einen Fehler
-                log.error('shit happens didnt read the file: log.log');// logge den Fehler
-            } else{// nope alles gut weiter im Text
-                log.info('hurray read the file : log.log');//logge den Erfolg
-                resolve(mzdata);//gib das Ergebnis zurück
-            }
-        }
-    )}
-)};
-
 //Nun suche und lese die Game.log Datei - gleicher Aufbau wie bei der Log.log Datei siehe eine Funktion zuvor
-function getthegame(mypath) {//habe den Pfad  erhalten
+function getthegame() {//habe den Pfad  erhalten
     return new Promise(function(resolve,reject){//arbeite weiter synchron
-        if (myconfig.node_env !== "production"){//wenn nicht in Produktion, dann 
-            route="./dev/Game.log";//nimm die dev Dateien
-        } else {
-            route = mypath+game_log;// suche nach der log
-        };
-        fs.readFile(route, 'utf8',(err,tzdata) => {// lies die Datei ein
+        fs.readFile(path_log, 'utf8',(err,tzdata) => {// lies die Datei ein
             if (err){// Fehler ist schlecht
-                log.error('shit happens didnt read the game file: Game.log');
+                log.error(`shit happens didnt read the game file: Game.log at ${path_log}`);
                 reject(err);// geht auf Fehler stopp
             } else{// alles gelesen 
-                log.info('hurray read the game file: Game.log');
+                log.info(`hurray read the game file: Game.log ${path_log}`);
                 resolve(tzdata);// gib diese Daten Weiter
             }
         })
     })
 };
-
-// Funktion, um aus der log.log Datei den Spiele Installationspfad zu bekommen
-function searchthepath(fgdata){
-    return new Promise(function(resolve,reject){// auch hier wieder ein Verprechen
-        gesplittet = fgdata.split(',');//teile die gesamte datei bei jedem , in ein Feldspeicher
-        let T = true;//als Laufzeitvariable
-        let x = gesplittet.length;// wieviele Einträge habe ich zu durchsuchen ?
-        while (T) {// starte die Schleife solange Wahr
-            x--;//verringere den Pointer
-            if (gesplittet[x].toLowerCase().indexOf("launching star citizen live from (") >= 0){//finde ich den Mekrer String in dieser Zeile
-                log.info('found path to game: '+ x);//jupp somit logge ich die Zeile
-                T = false;//kann aus der Schleife raus
-                let helper = gesplittet[x].split('(');//befreie nun den eigentlichen Pfad aus der Zeile von allem Ballast
-                let bb = helper[1].indexOf(')');
-                prog_path = helper[1].substring(0,bb);
-                log.info(prog_path);//voila logge den Pfad
-                resolve(prog_path);//gib diesen zurück
-            }
-            if (x<=0){// upps ich habe das Ende der Datei erreicht und keinen Eintrag gefunden - damit Notaus sonst stecken wir hier für immer fest
-                T = false;// Laufvariable false
-                log.error('found no path to game engine');// logge den Umstand
-                //wahr = false;//setze MErker für Misserfolg
-                reject('no path found in log.log');//gib einen Fehler aus
-            }
-        }   
-    }
-)};
-
 
 // Funktion zur Ermittlung der Server IP
 function searchip(data){
@@ -373,7 +328,7 @@ function searchgamehandle(bvdata){
                         my_game_handle = xxx;
                         myconfig.handle=xxx;
                         log.info('Game Handle war noch nicht gespeichert - Hole nach!');
-                        fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
+                        //fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
                     }
                     resolve(gesplittet);//weitergabe der Daten aus game.log für IP finden
                 }
@@ -466,7 +421,7 @@ function logfilechanged(data){
             my_game_handle = xxx;
             myconfig.handle=xxx;
             log.info('Game Handle war noch nicht gespeichert - Hole nach!');
-            fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
+            //fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Datei
         }
     }
     if (data.toLowerCase().indexOf("<channel connection complete>") >= 0){//suche nach dem String
@@ -484,6 +439,23 @@ function logfilechanged(data){
 function onsuccess(v){ 
     log.info('Alle Vorbereitungen abgeschlossen ---- auf zum Start');  
     app.whenReady().then(() => {
+        let gefunden = false;
+        if (myconfig.displ_name === ""){
+            log.info('Suche Monitore ...');
+            const displays = screen.getAllDisplays();
+            const primary_display = screen.getPrimaryDisplay();
+            displays.forEach((display)=>{
+                if (primary_display.id !== display.id){
+                    mydisplay=display;
+                    gefunden = true;
+                    log.info(`found not primary display : ${mydisplay.id}`);
+                }
+            })
+            if (!gefunden){
+                mydisplay=primary_display;
+                log.info(`Nur Primaeres Display gefunden ${mydisplay.id}`)
+            }
+        }
         createMainWindow()});
 };
 
@@ -527,12 +499,18 @@ function refresh_auth_token(){
     lauf++;
     if (lauf > access_token_time){// vergleich mit sollzeit
         lauf=0;
+        lauf2++;
         log.info('nun machen wir einen Auth Token refresh...');
         get_new_access(refr_token);// rufe funktion zur erneuerung auf
-        log.info('Check also for App Updates');
-        autoUpdater.checkForUpdates();
-    };
-};
+    }
+    if (lauf2 > search_update_time){
+        lauf2 = 0;
+        if (search_update){
+            log.info('Check also for App Updates');
+            autoUpdater.checkForUpdatesAndNotify();
+        }
+    }
+}
 
 //funktion zum speichern eines neuen refresh token
 function store_new_token(tokens){
@@ -588,20 +566,20 @@ function check_game_is_running(){
     return new Promise(function(resolve,reject){
         isRunning(game_process).then((v) => {
             if (v){
-                //log.info('Game is running');
+                log.info('Game is running');
                 game_running = true;
             } else {
-                //log.warn('Game is not active');
+                log.warn('Game is not active');
                 game_running = false;
             }
-            resolve(v);
+            resolve();
         })
     })
 };
 
 //handle zum aktuellen Fenster
 function get_actual_window(){
-    myaktwind = windowManager.getActiveWindow();
+    myaktwind = screen.get();
     if (myaktwind.getTitle() === myconfig.win_name){
         myaktwind.setBounds(mybounds);
         log.info(`did set Window Bounds : ${myaktwind.getTitle()}`);
@@ -666,8 +644,7 @@ function starte_ws(){
 };
 
 function onFinally(){
-    get_actual_window();
-    tail = new Tail (prog_path+'\\Game.log');// überwache das Dateiende von Game.log mit einem Event
+    tail = new Tail (path_log);// überwache das Dateiende von Game.log mit einem Event
     clipboardListener.startListening();// setze den Eventhandler zum Clipboard überwachen
     clipboardListener.on('change',() => {// bei Event
         let buffer = clipboard.readImage().toPNG();// lies doch einfach mal ein Bild ein
@@ -714,15 +691,12 @@ function onFinally(){
 const mypromise = new Promise((resolve,reject) =>{
     deletelog(process.env.USERPROFILE+"\\AppData\\Roaming\\ISR Tool\\logs\\main.log")
     .then(log.initialize);
-    log.info('Anfang');
     resolve();
 });
 
 mypromise
     .then (startwerte)
     .then(check_game_is_running)
-    .then(getthelogs)// arbeite folgende Funktionen der Reihe nach ab
-    .then(searchthepath)
     .then(getthegame)
     .then(searchgamehandle)
     .then(searchip)
@@ -770,7 +744,7 @@ ipcMain.on("register_new_user", (event,args) =>{//KontextBridge zum Renderer Pro
     log.info(`got clicked data register : ${mm.username}`);
     my_game_handle = mm.last_name;
     myconfig.handle = my_game_handle;
-    fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Date
+    //fs.writeFileSync(config_path+'.config.json', JSON.stringify(myconfig,null,2));//speichern in Date
     axios// post zur backendAPI
         .post(my_register_url,mm,{
             timeout:5000,
@@ -833,20 +807,20 @@ ipcMain.on("check1", (event,args) =>{//KontextBridge zum Renderer Prozess - Hier
     };
 });
 
-ipcMain.on("restart_app",() => {
-    log.info('got quit and install from GUI');
-    autoUpdater.quitAndInstall();
-});
+//ipcMain.on("restart_app",() => {
+//    log.info('got quit and install from GUI');
+//    autoUpdater.quitAndInstall();
+//});
 
-autoUpdater.on('update-available', () => {
-    log.info('Message to gui new release');
-    mywindow.webContents.send('message:new_release','update_available');
-  });
+//autoUpdater.on('update-available', () => {
+//    log.info('Message to gui new release');
+//    mywindow.webContents.send('message:new_release','update_available');
+//  });
 
-autoUpdater.on('update-downloaded', () => {
-    log.info('New Release is down - please restart');
-    mywindow.webContents.send('message:release_down','update_downloaded');
-  });
+//autoUpdater.on('update-downloaded', () => {
+//    log.info('New Release is down - please restart');
+//    mywindow.webContents.send('message:release_down','update_downloaded');
+//  });
 
 
 
